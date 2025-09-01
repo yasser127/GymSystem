@@ -1,4 +1,3 @@
-// routes/plansRoutes.js (dev-friendly, verbose logging)
 import express from "express";
 import { connectToDataBase } from "../db.js";
 import multer from "multer";
@@ -6,9 +5,9 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-// dev helper: pretty log
+
 const log = (...args) => console.log("[plansRoutes]", ...args);
 
 // verifyToken middleware (same as authRoutes but verbose)
@@ -80,7 +79,7 @@ router.get("/:id/image", async (req, res) => {
 
 /* POST /plans - create plan (admin only) */
 router.post("/", verifyToken, upload.single("image"), async (req, res) => {
-  // Because we are using multer, req.body contains the form fields
+
   try {
     log("CREATE /plans request received");
     log("Headers:", req.headers ? { authorization: req.headers.authorization } : {});
