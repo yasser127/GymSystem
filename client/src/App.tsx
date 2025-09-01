@@ -9,22 +9,30 @@ import Register from "./pages/Register/Register";
 const MainLayout = () => (
   <div>
     <Header />
-    <Outlet /> {/* this is where nested routes render */}
+    <Outlet /> 
   </div>
 );
 
 const App = () => {
+
+  const isAdmin = () => {
+    if (localStorage.getItem("token")) {
+      return true;
+    }
+    return false;
+  }
+
   return (
     <Routes>
-      {/* Routes with header */}
+     
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/about" element={<About />} />
-        <Route path="/register" element={<Register />} />
+        {isAdmin() && <Route path="/register" element={<Register />} />}
       </Route>
 
-      {/* Routes without header */}
+      
       <Route path="/login" element={<Login />} />
     </Routes>
   );

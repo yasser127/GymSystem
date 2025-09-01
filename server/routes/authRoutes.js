@@ -1,4 +1,3 @@
-// authRoutes.js
 import express from "express";
 import { connectToDataBase } from "../db.js";
 import bcrypt from "bcrypt";

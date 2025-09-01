@@ -1,8 +1,9 @@
-// Header.tsx
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../../assets/logo.png";
+import { useGetMeQuery, api } from "../../../services/api";
+import { useAppDispatch } from "../../../store/hooks";
 
 type LinkDef = { to: string; label: string; accent: string };
 
@@ -13,17 +14,55 @@ const links: LinkDef[] = [
 ];
 
 const Header: React.FC = () => {
+  const { data: isAdmin } = useGetMeQuery();
+
+  const visibleLinks = links.filter(
+    (l) => !(l.label === "Register a Member" && isAdmin !== true)
+  );
+
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
+    () => !!localStorage.getItem("token")
+  );
+
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "token") {
+        setIsLoggedIn(!!e.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  // Logout handler: remove token, clear RTK Query cache, update UI, redirect to /login
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      localStorage.removeItem("token");
+
+      dispatch(api.util.resetApiState());
+
+      setIsLoggedIn(false);
+
+      navigate("/");
+    } catch (err) {
+      console.error("Logout failed:", err);
+      navigate("/");
+    }
+  };
+
   return (
     <motion.header
       initial={{ y: -70, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
-      className="bg-gradient-to-r from-sky-500 via-pink-300 via-80% to-purple-600 "
+      className="bg-gradient-to-r from-sky-500 via-pink-300 via-80% to-purple-600"
     >
       <div className="w-full flex items-center justify-between pl-2 sm:pl-4 pr-4 sm:pr-6 py-4 text-lg">
-        {/* LEFT GROUP: logo + About/Plans */}
         <div className="flex items-center gap-6">
-          {/* Logo */}
           <motion.div
             initial={{ x: -30, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -37,9 +76,8 @@ const Header: React.FC = () => {
             />
           </motion.div>
 
-          {/* Links next to logo */}
           <nav className="hidden md:flex gap-4 items-center font-medium">
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <motion.div
                 key={link.to}
                 whileHover={{ y: -3 }}
@@ -68,29 +106,34 @@ const Header: React.FC = () => {
           </nav>
         </div>
 
-        {/* RIGHT GROUP: Login alone on far right */}
         <div className="flex items-center">
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            <NavLink
-              to="/login"
-              className={({ isActive }: { isActive: boolean }) =>
-                [
-                  "relative inline-block px-5 py-2 rounded-lg font-semibold overflow-hidden group",
-                  // Login active: stronger purple glow shadow (slightly larger)
-                  isActive
-                    ? "bg-gradient-to-r from-violet-700 to-pink-600 text-white "
-                    : "bg-white text-gray-800 border-2 border-white/30 ",
-                ].join(" ")
-              }
-            >
-              <span className="relative z-10">Login</span>
-
-              {/* Hover gradient fill (for non-active state) */}
-              <span className="absolute inset-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0 pointer-events-none bg-gradient-to-r from-violet-600 to-pink-500 opacity-90" />
-
-              {/* border overlay to keep crisp edges */}
-              <span className="absolute inset-0 rounded-lg border border-white/20 z-20 pointer-events-none" />
-            </NavLink>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="relative inline-block px-5 py-2 rounded-lg font-semibold overflow-hidden group bg-white text-gray-800 border-2 border-white/30"
+              >
+                <span className="relative z-10">Logout</span>
+                <span className="absolute inset-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0 pointer-events-none bg-gradient-to-r from-violet-600 to-pink-500 opacity-90" />
+                <span className="absolute inset-0 rounded-lg border border-white/20 z-20 pointer-events-none" />
+              </button>
+            ) : (
+              <NavLink
+                to="/login"
+                className={({ isActive }: { isActive: boolean }) =>
+                  [
+                    "relative inline-block px-5 py-2 rounded-lg font-semibold overflow-hidden group",
+                    isActive
+                      ? "bg-gradient-to-r from-violet-700 to-pink-600 text-white"
+                      : "bg-white text-gray-800 border-2 border-white/30",
+                  ].join(" ")
+                }
+              >
+                <span className="relative z-10">Login</span>
+                <span className="absolute inset-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0 pointer-events-none bg-gradient-to-r from-violet-600 to-pink-500 opacity-90" />
+                <span className="absolute inset-0 rounded-lg border border-white/20 z-20 pointer-events-none" />
+              </NavLink>
+            )}
           </motion.div>
         </div>
       </div>
