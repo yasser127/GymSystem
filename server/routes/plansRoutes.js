@@ -2,15 +2,15 @@ import express from "express";
 import { connectToDataBase } from "../db.js";
 import multer from "multer";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-
 const log = (...args) => console.log("[plansRoutes]", ...args);
 
-// verifyToken middleware (same as authRoutes but verbose)
+// verifyToken middleware
 const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.header("Authorization");
@@ -22,26 +22,37 @@ const verifyToken = (req, res, next) => {
     const parts = authHeader.split(" ");
     if (parts.length !== 2 || parts[0] !== "Bearer") {
       log("verifyToken: bad auth header format", authHeader);
-      return res.status(401).json({ message: "Invalid authorization header format" });
+      return res
+        .status(401)
+        .json({ message: "Invalid authorization header format" });
     }
 
     const token = parts[1];
     const decoded = jwt.verify(token, process.env.JWT_KEY);
-    req.user = { id: decoded.id, username: decoded.username, isAdmin: !!decoded.isAdmin };
+    req.user = {
+      id: decoded.id,
+      username: decoded.username,
+      isAdmin: !!decoded.isAdmin,
+    };
     req.id = decoded.id;
     req.isAdmin = !!decoded.isAdmin;
     next();
   } catch (err) {
     log("verifyToken error:", err?.message || err);
-    return res.status(401).json({ message: "Invalid or expired token", details: err?.message });
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired token", details: err?.message });
   }
 };
 
 // validate basic payload
 function validatePlanPayload({ name, price, duration }) {
-  if (!name || typeof name !== "string" || name.trim() === "") return "Name is required";
-  if (price === undefined || price === null || isNaN(Number(price))) return "Price must be a number";
-  if (duration === undefined || duration === null || isNaN(Number(duration))) return "Duration must be an integer";
+  if (!name || typeof name !== "string" || name.trim() === "")
+    return "Name is required";
+  if (price === undefined || price === null || isNaN(Number(price)))
+    return "Price must be a number";
+  if (duration === undefined || duration === null || isNaN(Number(duration)))
+    return "Duration must be an integer";
   return null;
 }
 
@@ -55,7 +66,9 @@ router.get("/", async (req, res) => {
     return res.status(200).json(rows || []);
   } catch (err) {
     log("GET /plans error:", err);
-    return res.status(500).json({ message: "Server error", details: err?.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message });
   }
 });
 
@@ -64,25 +77,28 @@ router.get("/:id/image", async (req, res) => {
   try {
     const id = req.params.id;
     const db = await connectToDataBase();
-    const [rows] = await db.query(`SELECT image FROM plans WHERE id = ? LIMIT 1;`, [id]);
-    if (!rows || rows.length === 0) return res.status(404).json({ message: "Plan not found" });
+    const [rows] = await db.query(
+      `SELECT image FROM plans WHERE id = ? LIMIT 1;`,
+      [id]
+    );
+    if (!rows || rows.length === 0)
+      return res.status(404).json({ message: "Plan not found" });
     const rec = rows[0];
     if (!rec.image) return res.status(404).json({ message: "Image not found" });
-    // Best-effort content-type so browsers try: image/* may render many types
     res.setHeader("Content-Type", "image/*");
     return res.status(200).send(rec.image);
   } catch (err) {
     log("GET image error:", err);
-    return res.status(500).json({ message: "Server error", details: err?.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message });
   }
 });
 
 /* POST /plans - create plan (admin only) */
 router.post("/", verifyToken, upload.single("image"), async (req, res) => {
-
   try {
     log("CREATE /plans request received");
-    log("Headers:", req.headers ? { authorization: req.headers.authorization } : {});
     log("User from token:", req.user);
 
     if (!req.isAdmin) {
@@ -90,10 +106,13 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
       return res.status(403).json({ message: "Forbidden: admins only" });
     }
 
-    // fields from multipart/form-data
     const { name, description = null, price, duration } = req.body;
-    log("Form fields:", { name, price, duration, description });
-    if (req.file) log("Uploaded file:", { originalname: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype });
+    if (req.file)
+      log("Uploaded file:", {
+        originalname: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+      });
 
     const validation = validatePlanPayload({ name, price, duration });
     if (validation) {
@@ -108,43 +127,94 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
       const [result] = await db.query(
         `INSERT INTO plans (name, description, price, duration, admin_id, image)
          VALUES (?, ?, ?, ?, ?, ?);`,
-        [name, description, Number(price), Number(duration), adminId, imageBuffer]
+        [
+          name,
+          description,
+          Number(price),
+          Number(duration),
+          adminId,
+          imageBuffer,
+        ]
       );
       log("Inserted plan id:", result.insertId);
-      return res.status(201).json({ message: "Plan created", id: result.insertId });
+      return res
+        .status(201)
+        .json({ message: "Plan created", id: result.insertId });
     } catch (dbErr) {
       log("DB error on insert:", dbErr);
       if (dbErr && dbErr.code === "ER_DUP_ENTRY") {
-        return res.status(409).json({ message: "Plan name already exists", details: dbErr.sqlMessage || dbErr.message });
+        return res
+          .status(409)
+          .json({
+            message: "Plan name already exists",
+            details: dbErr.sqlMessage || dbErr.message,
+          });
       }
-      return res.status(500).json({ message: "Database error", details: dbErr?.message || dbErr });
+      return res
+        .status(500)
+        .json({ message: "Database error", details: dbErr?.message || dbErr });
     }
   } catch (err) {
-    // Multer throws a MulterError for file-size or multipart issues; catch it and return
     log("Unhandled error in POST /plans:", err);
-    return res.status(500).json({ message: "Server error", details: err?.message || err });
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message || err });
   }
 });
 
 /* PUT /plans/:id - update plan (admin only) */
 router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
   try {
-    log("UPDATE /plans/:id called:", req.params.id, "user:", req.user && req.user.id);
-    if (!req.isAdmin) return res.status(403).json({ message: "Forbidden: admins only" });
+    log(
+      "UPDATE /plans/:id called:",
+      req.params.id,
+      "user:",
+      req.user && req.user.id
+    );
+    if (!req.isAdmin)
+      return res.status(403).json({ message: "Forbidden: admins only" });
 
     const planId = req.params.id;
     const { name, description, price, duration } = req.body;
-    const removeImage = req.query.removeImage === "true" || req.query.removeImage === "1";
+    const removeImage =
+      req.query.removeImage === "true" || req.query.removeImage === "1";
 
-    log("Update payload:", { name, price, duration, description, removeImage, file: req.file ? { name: req.file.originalname, size: req.file.size } : null });
+    log("Update payload:", {
+      name,
+      price,
+      duration,
+      description,
+      removeImage,
+      file: req.file
+        ? { name: req.file.originalname, size: req.file.size }
+        : null,
+    });
 
     const fields = [];
     const params = [];
 
-    if (name !== undefined) { if (!name || name.trim() === "") return res.status(400).json({ message: "Invalid name" }); fields.push("name = ?"); params.push(name); }
-    if (description !== undefined) { fields.push("description = ?"); params.push(description); }
-    if (price !== undefined) { if (price === "" || isNaN(Number(price))) return res.status(400).json({ message: "Invalid price" }); fields.push("price = ?"); params.push(Number(price)); }
-    if (duration !== undefined) { if (duration === "" || isNaN(Number(duration))) return res.status(400).json({ message: "Invalid duration" }); fields.push("duration = ?"); params.push(Number(duration)); }
+    if (name !== undefined) {
+      if (!name || name.trim() === "")
+        return res.status(400).json({ message: "Invalid name" });
+      fields.push("name = ?");
+      params.push(name);
+    }
+    if (description !== undefined) {
+      fields.push("description = ?");
+      params.push(description);
+    }
+    if (price !== undefined) {
+      if (price === "" || isNaN(Number(price)))
+        return res.status(400).json({ message: "Invalid price" });
+      fields.push("price = ?");
+      params.push(Number(price));
+    }
+    if (duration !== undefined) {
+      if (duration === "" || isNaN(Number(duration)))
+        return res.status(400).json({ message: "Invalid duration" });
+      fields.push("duration = ?");
+      params.push(Number(duration));
+    }
 
     if (req.file) {
       fields.push("image = ?");
@@ -153,7 +223,8 @@ router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
       fields.push("image = NULL");
     }
 
-    if (fields.length === 0) return res.status(400).json({ message: "No updatable fields provided" });
+    if (fields.length === 0)
+      return res.status(400).json({ message: "No updatable fields provided" });
 
     params.push(planId);
     const sql = `UPDATE plans SET ${fields.join(", ")} WHERE id = ?;`;
@@ -161,32 +232,175 @@ router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
 
     try {
       const [result] = await db.query(sql, params);
-      if (result.affectedRows === 0) return res.status(404).json({ message: "Plan not found" });
+      if (result.affectedRows === 0)
+        return res.status(404).json({ message: "Plan not found" });
       return res.status(200).json({ message: "Plan updated" });
     } catch (dbErr) {
       log("DB error on update:", dbErr);
-      if (dbErr && dbErr.code === "ER_DUP_ENTRY") return res.status(409).json({ message: "Plan name already exists" });
-      return res.status(500).json({ message: "Database error", details: dbErr?.message });
+      if (dbErr && dbErr.code === "ER_DUP_ENTRY")
+        return res.status(409).json({ message: "Plan name already exists" });
+      return res
+        .status(500)
+        .json({ message: "Database error", details: dbErr?.message });
     }
   } catch (err) {
     log("Unhandled update error:", err);
-    return res.status(500).json({ message: "Server error", details: err?.message || err });
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message || err });
   }
 });
 
 /* DELETE /plans/:id - admin only */
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    log("DELETE /plans/:id called:", req.params.id, "by user:", req.user && req.user.id);
-    if (!req.isAdmin) return res.status(403).json({ message: "Forbidden: admins only" });
+    log(
+      "DELETE /plans/:id called:",
+      req.params.id,
+      "by user:",
+      req.user && req.user.id
+    );
+    if (!req.isAdmin)
+      return res.status(403).json({ message: "Forbidden: admins only" });
 
     const db = await connectToDataBase();
-    const [result] = await db.query(`DELETE FROM plans WHERE id = ?;`, [req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ message: "Plan not found" });
+    const [result] = await db.query(`DELETE FROM plans WHERE id = ?;`, [
+      req.params.id,
+    ]);
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Plan not found" });
     return res.status(200).json({ message: "Plan deleted" });
   } catch (err) {
     log("DELETE error:", err);
-    return res.status(500).json({ message: "Server error", details: err?.message || err });
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message || err });
+  }
+});
+
+router.post("/:id/subscribe", verifyToken, async (req, res) => {
+  try {
+    const memberId = req.id;
+    const planId = Number(req.params.id);
+    if (!memberId) return res.status(403).json({ message: "Unauthorized" });
+
+    const db = await connectToDataBase();
+
+    // fetch plan
+    const [planRows] = await db.query(
+      `SELECT id, name, price, duration FROM plans WHERE id = ? LIMIT 1;`,
+      [planId]
+    );
+    if (!planRows || planRows.length === 0)
+      return res.status(404).json({ message: "Plan not found" });
+    const plan = planRows[0];
+
+    // check existing active subscription that hasn't ended
+    const [activeRows] = await db.query(
+      `SELECT COUNT(1) as c FROM subscribe WHERE member_id = ? AND plan_id = ? AND status = 'Active' AND (end_date IS NULL OR end_date >= CURDATE());`,
+      [memberId, planId]
+    );
+    if (activeRows && activeRows[0] && activeRows[0].c > 0) {
+      return res
+        .status(400)
+        .json({
+          message: "You already have an active subscription for this plan.",
+        });
+    }
+
+    // Payment details (simple demo)
+    const { card, payment_method } = req.body || {};
+    // Accept either payment_method = 'Cash' or card info object
+    const payMethod = payment_method || (card ? "Credit Card" : "Other");
+    let cardHash = null;
+    if (card && card.number) {
+      // store a hash of the card number (demo only) and use last4
+      const last4 = String(card.number).slice(-4);
+      const raw = String(card.number);
+      cardHash =
+        crypto.createHash("sha256").update(raw).digest("hex").slice(0, 64) +
+        `|last4:${last4}`;
+    }
+
+    // create subscription & payment in transaction
+    try {
+      await db.query("START TRANSACTION;");
+
+      // compute dates (JS side)
+      const startDate = new Date();
+      const startDateStr = startDate.toISOString().slice(0, 10); // YYYY-MM-DD
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + Number(plan.duration));
+      const endDateStr = endDate.toISOString().slice(0, 10);
+
+      const status = "Active";
+
+      const [subResult] = await db.query(
+        `INSERT INTO subscribe (member_id, plan_id, start_date, end_date, renewal_date, status)
+         VALUES (?, ?, ?, ?, ?, ?);`,
+        [memberId, planId, startDateStr, endDateStr, endDateStr, status]
+      );
+
+      const subscribeId = subResult.insertId;
+
+      // insert payment record
+      const amount = Number(plan.price) || 0;
+      const [payResult] = await db.query(
+        `INSERT INTO payment (member_id, subscribe_id, amount, card_hash, payment_method)
+         VALUES (?, ?, ?, ?, ?);`,
+        [memberId, subscribeId, amount, cardHash, payMethod]
+      );
+
+      await db.query("COMMIT;");
+      return res
+        .status(201)
+        .json({
+          message: "Subscription created",
+          subscriptionId: subscribeId,
+          paymentId: payResult.insertId,
+        });
+    } catch (txErr) {
+      log("Transaction error creating subscription/payment:", txErr);
+      try {
+        await db.query("ROLLBACK;");
+      } catch (rbErr) {
+        log("Rollback failed:", rbErr);
+      }
+      return res
+        .status(500)
+        .json({
+          message: "Failed to create subscription",
+          details: txErr?.message || txErr,
+        });
+    }
+  } catch (err) {
+    log("Unhandled error in /:id/subscribe:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message || err });
+  }
+});
+
+/* GET /plans/subscriptions - get logged-in user's subscriptions (requires auth) */
+router.get("/subscriptions", verifyToken, async (req, res) => {
+  try {
+    const memberId = req.id;
+    const db = await connectToDataBase();
+    const [rows] = await db.query(
+      `SELECT s.id as subscription_id, s.plan_id, s.start_date, s.end_date, s.renewal_date, s.status, s.created_at,
+              p.name as plan_name, p.description as plan_description, p.price as plan_price, p.duration as plan_duration
+       FROM subscribe s
+       JOIN plans p ON s.plan_id = p.id
+       WHERE s.member_id = ?
+       ORDER BY s.created_at DESC;`,
+      [memberId]
+    );
+    return res.status(200).json(rows || []);
+  } catch (err) {
+    log("GET /plans/subscriptions error:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", details: err?.message });
   }
 });
 
