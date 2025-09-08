@@ -1,22 +1,40 @@
+// src/components/common/Header/Header.tsx
 import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../../assets/logo.png";
-import { useGetMeQuery, previllageChecker } from "../../../services/previllageChecker";
+import {
+  useGetMeQuery,
+  previllageChecker,
+} from "../../../services/previllageChecker";
 import { useAppDispatch } from "../../../store/hooks";
+import {
+  Home,
+  Info,
+  Calendar,
+  UserPlus,
+  CreditCard,
+  LogIn,
+  LogOut,
+} from "lucide-react";
 
-type LinkDef = { to: string; label: string; accent: string };
+type LinkDef = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
 
 const links: LinkDef[] = [
-  { to: "/", label: "Home", accent: "text-teal-300" },
-  { to: "/about", label: "About", accent: "text-teal-300" },
-  { to: "/plans", label: "Plans", accent: "text-amber-300" },
-  { to: "/register", label: "Register a Member", accent: "text-amber-300" },
+  { to: "/", label: "Home", icon: Home },
+  { to: "/about", label: "About", icon: Info },
+  { to: "/plans", label: "Plans", icon: Calendar },
+  { to: "/register", label: "Register a Member", icon: UserPlus },
+  { to: "/payment-history", label: "Payment History", icon: CreditCard },
 ];
 
 const Header: React.FC = () => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  // Only call getMe if a token exists (avoid 401s when anonymous)
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const { data } = useGetMeQuery(undefined, { skip: !token });
   const isAdmin = data?.isAdmin === true;
 
@@ -24,41 +42,31 @@ const Header: React.FC = () => {
     (l) => !(l.label === "Register a Member" && isAdmin !== true)
   );
 
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    () => !!token
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!token);
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "token") {
-        setIsLoggedIn(!!e.newValue);
-      }
+      if (e.key === "token") setIsLoggedIn(!!e.newValue);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // When token changes in this tab (e.g. login) we should also reflect login state
   useEffect(() => {
     const handle = () => setIsLoggedIn(!!localStorage.getItem("token"));
     window.addEventListener("visibilitychange", handle);
     return () => window.removeEventListener("visibilitychange", handle);
   }, []);
 
-  // Logout handler: remove token, clear RTK Query cache, update UI, redirect to /login or home
-  const handleLogout = async (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleLogout = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
     try {
       localStorage.removeItem("token");
-
-      // Clear RTK Query caches (this will also cause getMe to re-run if a token is set later)
       dispatch(previllageChecker.util.resetApiState());
-
       setIsLoggedIn(false);
-
       navigate("/login");
     } catch (err) {
       console.error("Logout failed:", err);
@@ -67,89 +75,76 @@ const Header: React.FC = () => {
   };
 
   return (
-    <motion.header
-      initial={{ y: -70, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
-      className="bg-gradient-to-r from-sky-500 via-pink-300 via-80% to-purple-600"
+    <motion.aside
+      initial={{ x: -30, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="w-64 min-h-screen bg-gradient-to-b from-sky-600 to-purple-700 text-white flex-shrink-0"
     >
-      <div className="w-full flex items-center justify-between pl-2 sm:pl-4 pr-4 sm:pr-6 py-4 text-lg">
-        <div className="flex items-center gap-6">
-          <motion.div
-            initial={{ x: -30, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.45, delay: 0.08 }}
-            className="flex-shrink-0"
-          >
-            <img
-              src={logo}
-              alt="logo"
-              className="w-20 sm:w-24 md:w-28 h-auto"
-            />
-          </motion.div>
-
-          <nav className="hidden md:flex gap-4 items-center font-medium">
-            {visibleLinks.map((link) => (
-              <motion.div
-                key={link.to}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.975 }}
-                className="relative group"
-              >
-                <NavLink
-                  to={link.to}
-                  end
-                  className={({ isActive }: { isActive: boolean }) =>
-                    [
-                      "px-3 py-2 rounded-md transition-all duration-200 inline-block relative",
-                      isActive
-                        ? "text-white backdrop-blur-sm rounded-md ring-2 ring-violet-300/45 bg-purple-500"
-                        : "text-white hover:text-gray-100",
-                    ].join(" ")
-                  }
-                >
-                  <span className="relative inline-block">
-                    {link.label}
-                    <span className="absolute left-0 -bottom-1 h-0.5 bg-pink-300 w-0 group-hover:w-full transition-all duration-300 rounded-full" />
-                  </span>
-                </NavLink>
-              </motion.div>
-            ))}
-          </nav>
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10">
+          <img
+            src={logo}
+            alt="logo"
+            className="w-24 h-12 sm:w-28 sm:h-14 md:w-32 md:h-16 lg:w-36 lg:h-18 xl:w-40 xl:h-20 rounded"
+          />
         </div>
 
-        <div className="flex items-center">
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            {isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="relative inline-block px-5 py-2 rounded-lg font-semibold overflow-hidden group bg-white text-gray-800 border-2 border-white/30"
-              >
-                <span className="relative z-10">Logout</span>
-                <span className="absolute inset-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0 pointer-events-none bg-gradient-to-r from-violet-600 to-pink-500 opacity-90" />
-                <span className="absolute inset-0 rounded-lg border border-white/20 z-20 pointer-events-none" />
-              </button>
-            ) : (
-              <NavLink
-                to="/login"
-                className={({ isActive }: { isActive: boolean }) =>
-                  [
-                    "relative inline-block px-5 py-2 rounded-lg font-semibold overflow-hidden group",
-                    isActive
-                      ? "bg-gradient-to-r from-violet-700 to-pink-600 text-white"
-                      : "bg-white text-gray-800 border-2 border-white/30",
-                  ].join(" ")
-                }
-              >
-                <span className="relative z-10">Login</span>
-                <span className="absolute inset-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0 pointer-events-none bg-gradient-to-r from-violet-600 to-pink-500 opacity-90" />
-                <span className="absolute inset-0 rounded-lg border border-white/20 z-20 pointer-events-none" />
-              </NavLink>
-            )}
-          </motion.div>
+        <nav className="flex-1 overflow-y-auto">
+          <ul className="py-2">
+            {visibleLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <li key={link.to} className="px-2">
+                  <NavLink
+                    to={link.to}
+                    end={link.to === "/"}
+                    className={({ isActive }) =>
+                      [
+                        "flex items-center gap-3 px-3 py-2 rounded-md mx-1 transition-colors duration-150",
+                        isActive
+                          ? "bg-white/10 ring-1 ring-white/20"
+                          : "hover:bg-white/10",
+                      ].join(" ")
+                    }
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium">{link.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/10">
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-semibold">Logout</span>
+            </button>
+          ) : (
+            <NavLink
+              to="/login"
+              className={({ isActive }) =>
+                [
+                  "w-full inline-flex items-center gap-3 px-3 py-2 rounded-md font-semibold",
+                  isActive
+                    ? "bg-white text-gray-800"
+                    : "bg-white text-gray-800 hover:opacity-95",
+                ].join(" ")
+              }
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Login</span>
+            </NavLink>
+          )}
         </div>
       </div>
-    </motion.header>
+    </motion.aside>
   );
 };
 
