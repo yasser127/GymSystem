@@ -1,4 +1,4 @@
-// register.tsx
+// register-form.tsx
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
+import { useGetMeQuery, previllageChecker } from "@/services/previllageChecker";
+import { useAppDispatch } from "@/store/hooks";
 
 type FormValues = {
   name: string;
@@ -40,6 +42,25 @@ export function RegisterForm({ className, ...props }: Props) {
     text: string;
   } | null>(null);
 
+  const dispatch = useAppDispatch();
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  // use RTK Query to fetch current user (skip when no token to avoid 401)
+  const { data: meData } = useGetMeQuery(undefined, { skip: !token });
+
+  // determine whether the current user can create admins
+  const canCreateAdmin = !!meData?.isAdmin;
+
+  // If the current user isn't allowed to create admins, ensure the checkbox is off
+  useEffect(() => {
+    if (!canCreateAdmin && values.isAdmin) {
+      setValues((prev) => ({ ...prev, isAdmin: false }));
+    }
+    // only respond to change in canCreateAdmin
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCreateAdmin]);
+
   // unified change handler that supports checkbox + inputs + select
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -54,6 +75,16 @@ export function RegisterForm({ className, ...props }: Props) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage(null);
+
+    // client-side guard: don't allow creating admin if current user isn't admin
+    if (values.isAdmin && !canCreateAdmin) {
+      setMessage({
+        type: "error",
+        text: "You are not authorized to create admin users.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -70,8 +101,10 @@ export function RegisterForm({ className, ...props }: Props) {
       }
 
       // If creating admin, include Authorization header if token exists (common case)
-      const token = localStorage.getItem("token");
-      const headers = values.isAdmin && token ? { Authorization: `Bearer ${token}` } : undefined;
+      const headers =
+        values.isAdmin && token
+          ? { Authorization: `Bearer ${token}` }
+          : undefined;
 
       const response = await axios.post(
         "http://localhost:3000/auth/register",
@@ -84,6 +117,8 @@ export function RegisterForm({ className, ...props }: Props) {
           type: "success",
           text: response.data?.message || "Registered successfully",
         });
+
+        // clear form
         setValues({
           name: "",
           gender: "Other",
@@ -92,6 +127,10 @@ export function RegisterForm({ className, ...props }: Props) {
           password: "",
           isAdmin: false,
         });
+
+        // Clear RTK Query caches so other parts of the app refetch user/permissions if needed
+        // (this is conservative — it forces a fresh getMe if UI wants it)
+        dispatch(previllageChecker.util.resetApiState());
       } else {
         setMessage({
           type: "error",
@@ -197,17 +236,25 @@ export function RegisterForm({ className, ...props }: Props) {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  id="isAdmin"
-                  name="isAdmin"
-                  type="checkbox"
-                  checked={values.isAdmin}
-                  onChange={handleChange}
-                  className="w-4 h-4"
-                />
-                <Label htmlFor="isAdmin">Is this user an admin?</Label>
-              </div>
+              {/* Show admin checkbox only when current user is admin */}
+              {canCreateAdmin ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    id="isAdmin"
+                    name="isAdmin"
+                    type="checkbox"
+                    checked={values.isAdmin}
+                    onChange={handleChange}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="isAdmin">Is this user an admin?</Label>
+                </div>
+              ) : (
+                // optionally show a small note for non-admins
+                <div className="text-sm text-gray-500">
+                  Only administrators may create admin users.
+                </div>
+              )}
 
               <div className="flex flex-col gap-3">
                 <Button
