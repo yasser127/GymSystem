@@ -1,0 +1,17 @@
+/* src/styles/sidebar.css */
+:root {
+  --sidebar-width: 256px; /* default, overridden by Header at runtime */
+}
+
+/* Desktop/tablet: main is pushed using the CSS var */
+.main-with-sidebar {
+  padding-left: var(--sidebar-width, 256px);
+  transition: padding-left 260ms cubic-bezier(.22,.9,.31,1);
+}
+
+/* MOBILE: remove padding so sidebar overlays instead of pushing */
+@media (max-width: 767px) {
+  .main-with-sidebar {
+    padding-left: 0 !important;
+  }
+}
