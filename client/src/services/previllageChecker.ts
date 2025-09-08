@@ -24,6 +24,23 @@ export type MeResponse = {
   user?: User | null;
 };
 
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const toBool = (v: unknown): boolean => {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const lower = v.toLowerCase();
+    if (lower === "true" || lower === "1") return true;
+    if (lower === "false" || lower === "0") return false;
+  }
+  if (typeof v === "number") {
+    if (v === 1) return true;
+    if (v === 0) return false;
+  }
+  return Boolean(v);
+};
+
 export const previllageChecker = createApi({
   reducerPath: "previllageChecker",
   baseQuery: fetchBaseQuery({
@@ -35,57 +52,56 @@ export const previllageChecker = createApi({
     },
   }),
   endpoints: (builder) => ({
-
     getMe: builder.query<MeResponse | null, void>({
       query: () => "/auth/register",
-    transformResponse: (response: any) => {
+      transformResponse: (response: unknown): MeResponse | null => {
+        // make a safe object version of response
+        const resp = isObject(response) ? response : {};
 
-  const userRaw = response?.user ?? null;
-  const user = userRaw ? { ...userRaw } : null;
-  const user_type = user?.user_type ?? null;
+        // user might be an object or null/undefined
+        const userRaw = resp.user ?? null;
+        const user = isObject(userRaw) ? ({ ...(userRaw as Record<string, unknown>) } as User) : null;
 
-  const toBool = (v: any) => {
-    if (v === true || v === "true") return true;
-    if (v === false || v === "false") return false;
-    if (v === 1 || v === "1") return true;
-    if (v === 0 || v === "0") return false;
-    return Boolean(v);
-  };
+        // user_type from top-level response or from user
+        const user_type =
+          typeof resp.user_type === "string"
+            ? resp.user_type
+            : user?.user_type && typeof user.user_type === "string"
+              ? user.user_type
+              : null;
 
-  let permissions = {
-    can_view_subscriptions: false,
-    can_view_members: false,
-    can_view_payments: false,
-  };
+        let permissions: Permissions = {
+          can_view_subscriptions: false,
+          can_view_members: false,
+          can_view_payments: false,
+        };
 
-  if (response?.permissions) {
-    permissions = {
-      can_view_subscriptions: !!response.permissions.can_view_subscriptions,
-      can_view_members: !!response.permissions.can_view_members,
-      can_view_payments: !!response.permissions.can_view_payments,
-    };
-  } else if (user) {
-    
-    permissions = {
-      can_view_subscriptions: toBool(user.can_view_subscriptions),
-      can_view_members: toBool(user.can_view_members),
-      can_view_payments: toBool(user.can_view_payments),
-    };
+        if (isObject(resp.permissions)) {
+          const p = resp.permissions as Record<string, unknown>;
+          permissions = {
+            can_view_subscriptions: toBool(p.can_view_subscriptions),
+            can_view_members: toBool(p.can_view_members),
+            can_view_payments: toBool(p.can_view_payments),
+          };
+        } else if (user) {
+          permissions = {
+            can_view_subscriptions: toBool(user.can_view_subscriptions),
+            can_view_members: toBool(user.can_view_members),
+            can_view_payments: toBool(user.can_view_payments),
+          };
 
-    
-    delete user.can_view_subscriptions;
-    delete user.can_view_members;
-    delete user.can_view_payments;
-  }
+          // clean permission-like props from user object if present
+          delete (user as Record<string, unknown>).can_view_subscriptions;
+          delete (user as Record<string, unknown>).can_view_members;
+          delete (user as Record<string, unknown>).can_view_payments;
+        }
 
-  const isAdmin = user_type === "admin";
-  const result = { isAdmin, user_type, permissions, user };
-  console.log("[previllageChecker.transformResponse] result:", result);
+        const isAdmin = user_type === "admin";
+        const result: MeResponse = { isAdmin, user_type, permissions, user };
+        console.log("[previllageChecker.transformResponse] result:", result);
 
-
-  return result;
-},
-
+        return result;
+      },
     }),
   }),
 });

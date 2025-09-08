@@ -45,14 +45,28 @@ export default function SubscribeModal({
     }
 
     if (open) {
-      axios.get(`${apiBase}/plans/payment-types`).then((res) => {
-        setPaymentTypes(res.data);
-        // default to "Credit Card" if available
-        const creditCard = res.data.find((t: any) => t.name === "Bank Transfer");
-        setSelectedType(creditCard?.id ?? res.data[0]?.id);
-      });
+      // typed axios response
+      const fetchPaymentTypes = async () => {
+        try {
+          const res = await axios.get<{ id: number; name: string }[]>(
+            `${apiBase}/plans/payment-types`
+          );
+          const data = res.data;
+          setPaymentTypes(data);
+
+          // default to "Bank Transfer" if available (keeps original logic)
+          const creditCard = data.find((t) => t.name === "Bank Transfer");
+          setSelectedType(creditCard?.id ?? data[0]?.id ?? null);
+        } catch (err) {
+          console.error("Failed to fetch payment types", err);
+          setPaymentTypes([]);
+          setSelectedType(null);
+        }
+      };
+
+      fetchPaymentTypes();
     }
-  }, [open]);
+  }, [open, apiBase]);
 
   if (!plan) return null;
 
@@ -66,10 +80,9 @@ export default function SubscribeModal({
     return null;
   }
 
-  async function handleSubmit(e?: React.FormEvent) {
+  async function handleSubmit(e?: React.FormEvent<HTMLFormElement>) {
     e?.preventDefault();
 
-    // require login
     if (!token) {
       setError("You must be logged in to subscribe.");
       return;
@@ -83,8 +96,12 @@ export default function SubscribeModal({
     setSubmitting(true);
     setError(null);
 
+    if (!plan) {
+      setError("No plan selected");
+      return;
+    }
+
     try {
-      // Demo: send card info to backend (not for prod!)
       const payload = {
         card: {
           name: cardName,
@@ -98,8 +115,9 @@ export default function SubscribeModal({
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await axios.post(
-        `${apiBase}/plans/${plan?.id}/subscribe`,
+      // typed axios.post response so we can safely access res.data.message
+      const res = await axios.post<{ message?: string }>(
+        `${apiBase}/plans/${plan.id}/subscribe`,
         payload,
         { headers }
       );
@@ -112,7 +130,9 @@ export default function SubscribeModal({
     } catch (err: unknown) {
       console.error("Subscribe error:", err);
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || "Failed to complete purchase");
+        // err.response?.data is unknown — coerce to known shape safely
+        const data = err.response?.data as { message?: string } | undefined;
+        setError(data?.message || "Failed to complete purchase");
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -193,7 +213,9 @@ export default function SubscribeModal({
                   </label>
                   <input
                     value={cardName}
-                    onChange={(e) => setCardName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setCardName(e.target.value)
+                    }
                     className="w-full rounded-lg border px-3 py-2"
                   />
                 </div>
@@ -204,7 +226,9 @@ export default function SubscribeModal({
                   </label>
                   <input
                     value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setCardNumber(e.target.value)
+                    }
                     className="w-full rounded-lg border px-3 py-2"
                     placeholder="1234 5678 9012 3456"
                   />
@@ -217,7 +241,9 @@ export default function SubscribeModal({
                     </label>
                     <input
                       value={expiry}
-                      onChange={(e) => setExpiry(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setExpiry(e.target.value)
+                      }
                       className="w-full rounded-lg border px-3 py-2"
                       placeholder="MM/YY"
                     />
@@ -228,14 +254,18 @@ export default function SubscribeModal({
                     </label>
                     <input
                       value={cvv}
-                      onChange={(e) => setCvv(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setCvv(e.target.value)
+                      }
                       className="w-full rounded-lg border px-3 py-2"
                       placeholder="123"
                     />
                   </div>
                   <select
                     value={selectedType ?? ""}
-                    onChange={(e) => setSelectedType(Number(e.target.value))}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      setSelectedType(Number(e.target.value))
+                    }
                     className="w-full rounded-lg border px-3 py-2"
                   >
                     {paymentTypes.map((t) => (

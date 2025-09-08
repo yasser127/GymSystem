@@ -24,7 +24,8 @@ type FormValues = {
   isAdmin: boolean;
 };
 
-type Props = React.ComponentProps<"div">;
+// allow any valid div attributes to be passed through
+type Props = React.HTMLAttributes<HTMLDivElement>;
 
 export function RegisterForm({ className, ...props }: Props) {
   const [values, setValues] = useState<FormValues>({
@@ -36,40 +37,57 @@ export function RegisterForm({ className, ...props }: Props) {
     isAdmin: false,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
   const dispatch = useAppDispatch();
-  const token =
+  const token: string | null =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   // use RTK Query to fetch current user (skip when no token to avoid 401)
   const { data: meData } = useGetMeQuery(undefined, { skip: !token });
 
   // determine whether the current user can create admins
-  const canCreateAdmin = !!meData?.isAdmin;
+  const canCreateAdmin: boolean = !!meData?.isAdmin;
 
   // If the current user isn't allowed to create admins, ensure the checkbox is off
   useEffect(() => {
     if (!canCreateAdmin && values.isAdmin) {
       setValues((prev) => ({ ...prev, isAdmin: false }));
     }
-    // only respond to change in canCreateAdmin
+    // only depend on canCreateAdmin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canCreateAdmin]);
 
-  // unified change handler that supports checkbox + inputs + select
+  // type-safe change handler
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
-    const { name, type } = target;
-    const value =
-      type === "checkbox" ? (target as HTMLInputElement).checked : target.value;
-    setValues((prev) => ({ ...prev, [name]: value } as any));
+    const { name } = target;
+
+    // Checkbox -> boolean (only for isAdmin)
+    if (target instanceof HTMLInputElement && target.type === "checkbox") {
+      const checked = (target as HTMLInputElement).checked;
+      setValues(
+        (prev) => ({ ...prev, [name]: checked } as unknown as FormValues)
+      );
+      return;
+    }
+
+    // Gender select -> union
+    if (name === "gender") {
+      const val = (target as HTMLSelectElement).value as FormValues["gender"];
+      setValues((prev) => ({ ...prev, gender: val }));
+      return;
+    }
+
+    // All other inputs -> string
+    const val = (target as HTMLInputElement).value;
+    setValues((prev) => ({ ...prev, [name]: val } as unknown as FormValues));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -89,7 +107,7 @@ export function RegisterForm({ className, ...props }: Props) {
 
     try {
       // Build payload. If creating an admin, indicate userType: "admin"
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: values.name,
         gender: values.gender,
         email: values.email,
@@ -129,8 +147,9 @@ export function RegisterForm({ className, ...props }: Props) {
         });
 
         // Clear RTK Query caches so other parts of the app refetch user/permissions if needed
-        // (this is conservative — it forces a fresh getMe if UI wants it)
-        dispatch(previllageChecker.util.resetApiState());
+        // Cast to any because TS can be strict about util actions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        dispatch(previllageChecker.util.resetApiState() as any);
       } else {
         setMessage({
           type: "error",
@@ -139,12 +158,17 @@ export function RegisterForm({ className, ...props }: Props) {
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
+        // try to pull message safely
+        const serverMessage =
+          typeof err.response?.data === "object" &&
+          err.response?.data !== null &&
+          "message" in err.response.data
+            ? (err.response.data as { message: string }).message
+            : undefined;
+
         setMessage({
           type: "error",
-          text:
-            (err.response?.data as any)?.message ||
-            err.message ||
-            "Request failed",
+          text: serverMessage || err.message || "Request failed",
         });
       } else if (err instanceof Error) {
         setMessage({ type: "error", text: err.message });
