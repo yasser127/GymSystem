@@ -32,7 +32,7 @@ export function LoginForm({
         values
       );
 localStorage.setItem("token", response.data.token);
-      if (response.status === 201) {
+      if (response.status === 200) {
         navigate("/");
       }
       console.log(response);

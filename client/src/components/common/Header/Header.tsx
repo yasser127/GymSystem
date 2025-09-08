@@ -2,26 +2,30 @@ import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../../assets/logo.png";
-import { useGetMeQuery, api } from "../../../services/api";
+import { useGetMeQuery, previllageChecker } from "../../../services/previllageChecker";
 import { useAppDispatch } from "../../../store/hooks";
 
 type LinkDef = { to: string; label: string; accent: string };
 
 const links: LinkDef[] = [
+  { to: "/", label: "Home", accent: "text-teal-300" },
   { to: "/about", label: "About", accent: "text-teal-300" },
   { to: "/plans", label: "Plans", accent: "text-amber-300" },
   { to: "/register", label: "Register a Member", accent: "text-amber-300" },
 ];
 
 const Header: React.FC = () => {
-  const { data: isAdmin } = useGetMeQuery();
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  // Only call getMe if a token exists (avoid 401s when anonymous)
+  const { data } = useGetMeQuery(undefined, { skip: !token });
+  const isAdmin = data?.isAdmin === true;
 
   const visibleLinks = links.filter(
     (l) => !(l.label === "Register a Member" && isAdmin !== true)
   );
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    () => !!localStorage.getItem("token")
+    () => !!token
   );
 
   const dispatch = useAppDispatch();
@@ -37,20 +41,28 @@ const Header: React.FC = () => {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Logout handler: remove token, clear RTK Query cache, update UI, redirect to /login
+  // When token changes in this tab (e.g. login) we should also reflect login state
+  useEffect(() => {
+    const handle = () => setIsLoggedIn(!!localStorage.getItem("token"));
+    window.addEventListener("visibilitychange", handle);
+    return () => window.removeEventListener("visibilitychange", handle);
+  }, []);
+
+  // Logout handler: remove token, clear RTK Query cache, update UI, redirect to /login or home
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
       localStorage.removeItem("token");
 
-      dispatch(api.util.resetApiState());
+      // Clear RTK Query caches (this will also cause getMe to re-run if a token is set later)
+      dispatch(previllageChecker.util.resetApiState());
 
       setIsLoggedIn(false);
 
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       console.error("Logout failed:", err);
-      navigate("/");
+      navigate("/login");
     }
   };
 

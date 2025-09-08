@@ -4,9 +4,30 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
+
 function parseIsAdmin(val) {
-  // Accept true/false, "true"/"false", 1/0, "1"/"0"
+  // keep backward compatibility for incoming requests that still send isAdmin
   return val === true || val === "true" || val === 1 || val === "1";
+}
+
+/**
+ * Helper: resolve user_type id by name (falls back to 'member' if not found)
+ */
+async function getUserTypeId(pool, typeName = "member") {
+  // Try exact name
+  const [rows] = await pool.query(
+    `SELECT id, name, can_view_subscriptions, can_view_members, can_view_payments
+     FROM user_type WHERE name = ? LIMIT 1`,
+    [typeName]
+  );
+  if (rows && rows.length > 0) return rows[0];
+
+  // fallback to 'member'
+  const [fallback] = await pool.query(
+    `SELECT id, name, can_view_subscriptions, can_view_members, can_view_payments
+     FROM user_type WHERE name = 'member' LIMIT 1`
+  );
+  return (fallback && fallback[0]) || null;
 }
 
 router.post("/login", async (req, res) => {
@@ -19,18 +40,17 @@ router.post("/login", async (req, res) => {
 
   try {
     const pool = await connectToDataBase();
-    // Query both member and admin, include password for comparison
+
+    // find user by email (or username if you want to allow either, change query)
     const [rows] = await pool.query(
-      `SELECT id, email, username, password, 0 AS isAdmin
-       FROM member
-       WHERE email = ?
-       UNION
-       SELECT id, email, username, password, isAdmin
-       FROM admin
-       WHERE email = ?;`,
-      [email, email]
+      `SELECT u.id, u.email, u.username, u.password, u.name,
+              ut.name AS user_type, ut.can_view_subscriptions, ut.can_view_members, ut.can_view_payments
+       FROM users u
+       LEFT JOIN user_type ut ON u.user_type_id = ut.id
+       WHERE u.email = ? LIMIT 1;`,
+      [email]
     );
-    console.log(rows);
+
     if (!rows || rows.length === 0) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -48,15 +68,24 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign(
-      { id: user.id, username: user.username, isAdmin: user.isAdmin || 0 },
-      process.env.JWT_KEY,
-      { expiresIn: "6h" }
-    );
+    // Build token payload including user_type and permissions
+    const payload = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      user_type: user.user_type || "member",
+      permissions: {
+        can_view_subscriptions: !!user.can_view_subscriptions,
+        can_view_members: !!user.can_view_members,
+        can_view_payments: !!user.can_view_payments,
+      },
+    };
 
-    // Remove password before sending user object
+    const token = jwt.sign(payload, process.env.JWT_KEY, { expiresIn: "12h" });
+
+    // don't return password
     delete user.password;
-    return res.status(201).json({ token: token });
+    return res.status(200).json({ token, user: { id: user.id, email: user.email, username: user.username, name: user.name, user_type: user.user_type } });
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({ message: error.message || "Server error" });
@@ -65,30 +94,32 @@ router.post("/login", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   const { name, gender, email, username, password } = req.body;
-  const isAdmin = parseIsAdmin(req.body.isAdmin);
-
-  console.log("Register attempt:", { name, gender, email, username, isAdmin });
+  const isAdminLegacy = parseIsAdmin(req.body.isAdmin);
+  const requestedUserType = req.body.userType; // optional, preferred
+  console.log("Register attempt:", { name, gender, email, username, requestedUserType, isAdminLegacy });
 
   // Basic validation
-  if (!name || !gender || !email || !username || !password) {
+  if (!name || !email || !username || !password) {
     return res.status(400).json({ message: "Missing required fields" });
   }
-  const allowedGenders = ["Male", "Female", "Other"];
-  if (!allowedGenders.includes(gender)) {
-    return res.status(400).json({ message: "Invalid gender value" });
+  if (gender) {
+    const allowedGenders = ["Male", "Female", "Other"];
+    if (!allowedGenders.includes(gender)) {
+      return res.status(400).json({ message: "Invalid gender value" });
+    }
   }
 
   try {
     const pool = await connectToDataBase();
 
-    // 1) Check duplicates in member table
-    const [memberExisting] = await pool.query(
-      `SELECT email, username FROM member WHERE email = ? OR username = ?`,
+    // 1) Check duplicates (single query covers both email and username)
+    const [existing] = await pool.query(
+      `SELECT id, email, username FROM users WHERE email = ? OR username = ? LIMIT 1`,
       [email, username]
     );
-    if (memberExisting && memberExisting.length > 0) {
-      const sameEmail = memberExisting.some((r) => r.email === email);
-      const sameUsername = memberExisting.some((r) => r.username === username);
+    if (existing && existing.length > 0) {
+      const sameEmail = existing.some((r) => r.email === email);
+      const sameUsername = existing.some((r) => r.username === username);
       const message =
         sameEmail && sameUsername
           ? "Email and username already in use"
@@ -98,54 +129,38 @@ router.post("/register", async (req, res) => {
       return res.status(409).json({ message });
     }
 
-    // 2) Check duplicates in admin table
-    // admin table columns (per your DESCRIBE): email, username exist there
-    const [adminExisting] = await pool.query(
-      `SELECT email, username FROM admin WHERE email = ? OR username = ?`,
-      [email, username]
-    );
-    if (adminExisting && adminExisting.length > 0) {
-      const sameEmail = adminExisting.some((r) => r.email === email);
-      const sameUsername = adminExisting.some((r) => r.username === username);
-      const message =
-        sameEmail && sameUsername
-          ? "Email and username already in use (admin)"
-          : sameEmail
-          ? "Email already in use (admin)"
-          : "Username already in use (admin)";
-      return res.status(409).json({ message });
+    // 2) Determine user_type
+    let userTypeRow = null;
+    if (requestedUserType) {
+      userTypeRow = await getUserTypeId(pool, requestedUserType);
+    } else if (isAdminLegacy) {
+      userTypeRow = await getUserTypeId(pool, "admin");
+    } else {
+      userTypeRow = await getUserTypeId(pool, "member");
+    }
+
+    if (!userTypeRow) {
+      return res.status(500).json({ message: "No user_type found on the server" });
     }
 
     // 3) Hash password
     const hashPassword = await bcrypt.hash(password, 10);
 
-    // 4) Insert into the chosen table
-    if (isAdmin) {
-      await pool.query(
-        `INSERT INTO admin (name, phone, email, username, password, isAdmin) VALUES (?, ?, ?, ?, ?, ?)`,
-        // We don't have phone from frontend — send NULL
-        [name, null, email, username, hashPassword, 1]
-      );
-      return res
-        .status(201)
-        .json({ message: "Admin user created successfully" });
-    } else {
-      await pool.query(
-        `INSERT INTO member (name, gender, email, username, password) VALUES (?, ?, ?, ?, ?)`,
-        [name, gender, email, username, hashPassword]
-      );
-      return res
-        .status(201)
-        .json({ message: "Member user created successfully" });
-    }
+    // 4) Insert user (include user_type_id)
+    const [result] = await pool.query(
+      `INSERT INTO users (name, gender, email, username, password, user_type_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, gender || null, email, username, hashPassword, userTypeRow.id]
+    );
+
+    return res.status(201).json({ message: "User created successfully", userId: result.insertId, user_type: userTypeRow.name });
   } catch (error) {
     console.error("Register error:", error);
-    // Give meaningful message in dev; in production you may want to hide internals.
     return res.status(500).json({ message: error.message || "Server error" });
   }
 });
 
-// use correct header access and attach decoded info to req
+// middleware: verify token and attach user info & permissions
 const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.header("Authorization");
@@ -163,8 +178,9 @@ const verifyToken = (req, res, next) => {
 
     // attach useful info for handlers
     req.id = decoded.id;
-    req.isAdmin = !!decoded.isAdmin;
     req.user = decoded;
+    req.user_type = decoded.user_type;
+    req.permissions = decoded.permissions || {};
     next();
   } catch (error) {
     console.error("verifyToken error:", error);
@@ -172,27 +188,34 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// GET /register — returns the current user's basic info (admins only access remains possible via permissions)
 router.get("/register", verifyToken, async (req, res) => {
-  if (!req.isAdmin) {
-    return res.status(403).json({ message: "Forbidden: admins only" });
+  // if you want to restrict to admins only, check permissions:
+  if (!req.permissions.can_view_members && req.user_type !== "admin") {
+    return res.status(403).json({ message: "Forbidden: admins or authorized roles only" });
   }
 
   try {
     const db = await connectToDataBase();
 
-    // choose table based on token's isAdmin flag
-    const table = req.isAdmin ? "admin" : "member";
-
-    // select only commonly needed columns to keep results consistent
     const [rows] = await db.query(
-      `SELECT id, name, email, username, isAdmin FROM admin WHERE id = ?;`,
+      `SELECT u.id, u.name, u.email, u.username, u.gender, u.birth_date, u.age, u.phone, u.membership_expiry,
+              ut.name AS user_type, ut.can_view_subscriptions, ut.can_view_members, ut.can_view_payments
+       FROM users u
+       LEFT JOIN user_type ut ON u.user_type_id = ut.id
+       WHERE u.id = ? LIMIT 1;`,
       [req.id]
     );
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-    return res.status(200).json({ user: rows[0] });
+
+    const user = rows[0];
+    // Do not expose password column if it exists
+    delete user.password;
+
+    return res.status(200).json({ user });
   } catch (error) {
     console.error("GET /register error:", error);
     return res.status(500).json({ message: error.message || "Server error" });

@@ -3,7 +3,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import SubscribeModal from "../../components/SubscribeModal";
 import PlanModal from "../../components/PlanModal";
-import { useGetMeQuery } from "../../services/api";
+import { useGetMeQuery } from "../../services/previllageChecker";
 import MySubscriptions from "../../components/MySubscriptions";
 import PlanAdminActions from "../../components/PlanAdminActions";
 import PlanCard from "../../components/PlanCard";
@@ -227,7 +227,7 @@ export default function Plans(): React.ReactElement {
   async function updatePlan(id: number) {
     const fd = new FormData();
     if (form.name) fd.append("name", form.name);
-    fd.append("description", form.description || "");
+    if (form.description) fd.append("description", form.description || "");
     if (form.price !== "") fd.append("price", form.price);
     if (form.duration !== "") fd.append("duration", form.duration);
     if (form.imageFile) fd.append("image", form.imageFile);
@@ -275,18 +275,11 @@ export default function Plans(): React.ReactElement {
               onClick={openCreateModal}
               className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-md hover:scale-105 transform transition"
             >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+              <svg className="w-5 h-5" viewBox="0 0 20 20">
                 <path
                   d="M10 4v12M4 10h12"
                   stroke="currentColor"
                   strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
                 />
               </svg>
               Add Plan
@@ -299,7 +292,7 @@ export default function Plans(): React.ReactElement {
         </div>
       </div>
 
-      {/* only render subscriptions for non-admin users */}
+    
 
       {loading ? (
         <div className="text-center py-20 text-gray-500">Loading plans…</div>

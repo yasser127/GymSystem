@@ -1,26 +1,6 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-
-type FormState = {
-  name: string;
-  description: string;
-  price: string;
-  duration: string;
-  imageFile: File | null;
-  removeImage: boolean;
-};
-
-type PlanModalProps = {
-  open: boolean;
-  isEditing: boolean;
-  form: FormState;
-  previewUrl: string | null;
-  onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onFieldChange: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setForm: React.Dispatch<React.SetStateAction<FormState>>;
-};
+import type {PlanModalProps} from "../types";
 
 export default function PlanModal({
   open,

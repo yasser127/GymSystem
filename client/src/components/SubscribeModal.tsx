@@ -2,14 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-type Plan = {
-  id: number;
-  name: string;
-  description?: string | null;
-  price: number;
-  duration: number;
-};
+import type { Plan } from "../types";
 
 type Props = {
   open: boolean;
@@ -34,6 +27,10 @@ export default function SubscribeModal({
   const [cvv, setCvv] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentTypes, setPaymentTypes] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedType, setSelectedType] = useState<number | null>(null);
 
   const navigate = useNavigate();
 
@@ -45,6 +42,15 @@ export default function SubscribeModal({
       setCvv("");
       setSubmitting(false);
       setError(null);
+    }
+
+    if (open) {
+      axios.get(`${apiBase}/plans/payment-types`).then((res) => {
+        setPaymentTypes(res.data);
+        // default to "Credit Card" if available
+        const creditCard = res.data.find((t: any) => t.name === "Bank Transfer");
+        setSelectedType(creditCard?.id ?? res.data[0]?.id);
+      });
     }
   }, [open]);
 
@@ -86,6 +92,7 @@ export default function SubscribeModal({
           expiry,
           cvv,
         },
+        payment_type_id: selectedType,
       };
 
       const headers: Record<string, string> = {};
@@ -98,7 +105,6 @@ export default function SubscribeModal({
       );
 
       if (res.status === 201 || res.status === 200) {
-        
         onSuccess?.();
       } else {
         setError(res.data?.message || "Unexpected response");
@@ -152,7 +158,9 @@ export default function SubscribeModal({
 
             <p className="text-sm text-gray-500 mb-4">
               Price:{" "}
-              <span className="font-medium">${Number(plan.price).toFixed(2)}</span>{" "}
+              <span className="font-medium">
+                ${Number(plan.price).toFixed(2)}
+              </span>{" "}
               • Duration:{" "}
               <span className="font-medium">{plan.duration} days</span>
             </p>
@@ -163,7 +171,10 @@ export default function SubscribeModal({
                   You need to be logged in to subscribe.
                 </div>
                 <div className="flex gap-2 justify-end mt-4">
-                  <button onClick={onClose} className="px-4 py-2 rounded-lg border">
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 rounded-lg border"
+                  >
                     Cancel
                   </button>
                   <button
@@ -212,7 +223,9 @@ export default function SubscribeModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">CVV</label>
+                    <label className="block text-sm font-medium mb-1">
+                      CVV
+                    </label>
                     <input
                       value={cvv}
                       onChange={(e) => setCvv(e.target.value)}
@@ -220,6 +233,17 @@ export default function SubscribeModal({
                       placeholder="123"
                     />
                   </div>
+                  <select
+                    value={selectedType ?? ""}
+                    onChange={(e) => setSelectedType(Number(e.target.value))}
+                    className="w-full rounded-lg border px-3 py-2"
+                  >
+                    {paymentTypes.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {error && <div className="text-sm text-red-600">{error}</div>}

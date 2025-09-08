@@ -15,13 +15,6 @@ const MainLayout = () => (
 
 const App = () => {
 
-  const isAdmin = () => {
-    if (localStorage.getItem("token")) {
-      return true;
-    }
-    return false;
-  }
-
   return (
     <Routes>
      
@@ -29,7 +22,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/about" element={<About />} />
-        {isAdmin() && <Route path="/register" element={<Register />} />}
+        <Route path="/register" element={<Register />} />
       </Route>
 
       

@@ -1,3 +1,4 @@
+// plansRoutes.js
 import express from "express";
 import { connectToDataBase } from "../db.js";
 import multer from "multer";
@@ -10,7 +11,7 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const log = (...args) => console.log("[plansRoutes]", ...args);
 
-// verifyToken middleware
+// verifyToken middleware (updated for new JWT shape)
 const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.header("Authorization");
@@ -29,13 +30,15 @@ const verifyToken = (req, res, next) => {
 
     const token = parts[1];
     const decoded = jwt.verify(token, process.env.JWT_KEY);
-    req.user = {
-      id: decoded.id,
-      username: decoded.username,
-      isAdmin: !!decoded.isAdmin,
-    };
+
+    // decoded shape from the updated authRoutes: { id, username, name, user_type, permissions }
+    req.user = decoded;
     req.id = decoded.id;
-    req.isAdmin = !!decoded.isAdmin;
+    req.user_type = decoded.user_type ?? null;
+    req.permissions = decoded.permissions ?? {};
+    req.isAdmin =
+      decoded.user_type === "admin" || !!decoded.permissions?.isAdmin || false;
+
     next();
   } catch (err) {
     log("verifyToken error:", err?.message || err);
@@ -101,7 +104,8 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
     log("CREATE /plans request received");
     log("User from token:", req.user);
 
-    if (!req.isAdmin) {
+    // require admin role
+    if (req.user_type !== "admin") {
       log("Create forbidden: not admin:", req.user);
       return res.status(403).json({ message: "Forbidden: admins only" });
     }
@@ -143,12 +147,10 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
     } catch (dbErr) {
       log("DB error on insert:", dbErr);
       if (dbErr && dbErr.code === "ER_DUP_ENTRY") {
-        return res
-          .status(409)
-          .json({
-            message: "Plan name already exists",
-            details: dbErr.sqlMessage || dbErr.message,
-          });
+        return res.status(409).json({
+          message: "Plan name already exists",
+          details: dbErr.sqlMessage || dbErr.message,
+        });
       }
       return res
         .status(500)
@@ -171,7 +173,7 @@ router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
       "user:",
       req.user && req.user.id
     );
-    if (!req.isAdmin)
+    if (req.user_type !== "admin")
       return res.status(403).json({ message: "Forbidden: admins only" });
 
     const planId = req.params.id;
@@ -260,7 +262,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
       "by user:",
       req.user && req.user.id
     );
-    if (!req.isAdmin)
+    if (req.user_type !== "admin")
       return res.status(403).json({ message: "Forbidden: admins only" });
 
     const db = await connectToDataBase();
@@ -278,6 +280,54 @@ router.delete("/:id", verifyToken, async (req, res) => {
   }
 });
 
+/* GET /payment-types */
+router.get("/payment-types", async (req, res) => {
+  try {
+    const db = await connectToDataBase();
+    const [rows] = await db.query("SELECT id, name FROM payment_type;");
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching payment types:", err);
+    res.status(500).json({ message: "Failed to fetch payment types" });
+  }
+});
+
+async function resolvePaymentTypeId(db, provided, cardPresent) {
+  // try numeric id first
+  if (provided !== undefined && provided !== null) {
+    // numeric string or number?
+    if (typeof provided === "number" || /^\d+$/.test(String(provided))) {
+      const id = Number(provided);
+      const [rows] = await db.query(
+        "SELECT id FROM payment_type WHERE id = ? LIMIT 1;",
+        [id]
+      );
+      if (rows && rows.length > 0) return id;
+      return null;
+    }
+    // treat as name
+    const [rowsByName] = await db.query(
+      "SELECT id FROM payment_type WHERE name = ? LIMIT 1;",
+      [String(provided)]
+    );
+    if (rowsByName && rowsByName.length > 0) return rowsByName[0].id;
+    return null;
+  }
+
+  // not provided: pick default
+  const preferred = cardPresent ? "Credit Card" : "Cash";
+  let [rows] = await db.query(
+    "SELECT id FROM payment_type WHERE name = ? LIMIT 1;",
+    [preferred]
+  );
+  if (rows && rows.length > 0) return rows[0].id;
+
+  // fallback to any payment type
+  [rows] = await db.query("SELECT id FROM payment_type LIMIT 1;");
+  return rows && rows.length > 0 ? rows[0].id : null;
+}
+
+/* POST /:id/subscribe */
 router.post("/:id/subscribe", verifyToken, async (req, res) => {
   try {
     const memberId = req.id;
@@ -309,12 +359,14 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
     }
 
     // Payment details (simple demo)
-    const { card, payment_method } = req.body || {};
-    // Accept either payment_method = 'Cash' or card info object
-    const payMethod = payment_method || (card ? "Credit Card" : "Other");
+    const { card, payment_type_id } = req.body || {};
+
+    // compute payMethodId safely (numeric id that exists or null)
+    const payMethodId = await resolvePaymentTypeId(db, payment_type_id, !!card);
+
+    // create cardHash if card provided
     let cardHash = null;
     if (card && card.number) {
-      // store a hash of the card number (demo only) and use last4
       const last4 = String(card.number).slice(-4);
       const raw = String(card.number);
       cardHash =
@@ -343,22 +395,20 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
 
       const subscribeId = subResult.insertId;
 
-      // insert payment record
+      // insert payment record (payMethodId may be null if not found; FK uses ON DELETE SET NULL)
       const amount = Number(plan.price) || 0;
       const [payResult] = await db.query(
-        `INSERT INTO payment (member_id, subscribe_id, amount, card_hash, payment_method)
+        `INSERT INTO payment (member_id, subscribe_id, amount, card_hash, payment_type_id)
          VALUES (?, ?, ?, ?, ?);`,
-        [memberId, subscribeId, amount, cardHash, payMethod]
+        [memberId, subscribeId, amount, cardHash, payMethodId]
       );
 
       await db.query("COMMIT;");
-      return res
-        .status(201)
-        .json({
-          message: "Subscription created",
-          subscriptionId: subscribeId,
-          paymentId: payResult.insertId,
-        });
+      return res.status(201).json({
+        message: "Subscription created",
+        subscriptionId: subscribeId,
+        paymentId: payResult.insertId,
+      });
     } catch (txErr) {
       log("Transaction error creating subscription/payment:", txErr);
       try {

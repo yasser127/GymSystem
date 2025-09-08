@@ -32,3 +32,15 @@ export type SubscriptionView = {
   plan_price: number;
   plan_duration: number;
 };
+
+export type PlanModalProps = {
+  open: boolean;
+  isEditing: boolean;
+  form: FormState;
+  previewUrl: string | null;
+  onClose: () => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onFieldChange: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setForm: React.Dispatch<React.SetStateAction<FormState>>;
+};

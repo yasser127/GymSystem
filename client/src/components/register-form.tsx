@@ -48,7 +48,7 @@ export function RegisterForm({ className, ...props }: Props) {
     const { name, type } = target;
     const value =
       type === "checkbox" ? (target as HTMLInputElement).checked : target.value;
-    setValues((prev) => ({ ...prev, [name]: value }));
+    setValues((prev) => ({ ...prev, [name]: value } as any));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,29 +57,53 @@ export function RegisterForm({ className, ...props }: Props) {
     setLoading(true);
 
     try {
-      // send values directly (isAdmin will be boolean)
+      // Build payload. If creating an admin, indicate userType: "admin"
+      const payload: any = {
+        name: values.name,
+        gender: values.gender,
+        email: values.email,
+        username: values.username,
+        password: values.password,
+      };
+      if (values.isAdmin) {
+        payload.userType = "admin";
+      }
+
+      // If creating admin, include Authorization header if token exists (common case)
+      const token = localStorage.getItem("token");
+      const headers = values.isAdmin && token ? { Authorization: `Bearer ${token}` } : undefined;
+
       const response = await axios.post(
         "http://localhost:3000/auth/register",
-        values
+        payload,
+        headers ? { headers } : undefined
       );
-      setMessage({
-        type: "success",
-        text: response.data?.message || "Registered",
-      });
-      setValues({
-        name: "",
-        gender: "Other",
-        email: "",
-        username: "",
-        password: "",
-        isAdmin: false,
-      });
+
+      if (response.status >= 200 && response.status < 300) {
+        setMessage({
+          type: "success",
+          text: response.data?.message || "Registered successfully",
+        });
+        setValues({
+          name: "",
+          gender: "Other",
+          email: "",
+          username: "",
+          password: "",
+          isAdmin: false,
+        });
+      } else {
+        setMessage({
+          type: "error",
+          text: response.data?.message || "Registration failed",
+        });
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setMessage({
           type: "error",
           text:
-            (err.response?.data)?.message ||
+            (err.response?.data as any)?.message ||
             err.message ||
             "Request failed",
         });
