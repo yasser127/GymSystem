@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import type { Plan } from "../types";
+import type { Plan } from "../../types";
 
 const VITE_API_BASE = import.meta.env.VITE_API_BASE as string;
 

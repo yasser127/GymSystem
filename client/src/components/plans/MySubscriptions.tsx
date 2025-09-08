@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import type { SubscriptionView } from "../types";
+import type { SubscriptionView } from "../../types";
 
 const VITE_API_BASE = import.meta.env.VITE_API_BASE as string;
 

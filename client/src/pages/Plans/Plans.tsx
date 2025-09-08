@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import SubscribeModal from "../../components/SubscribeModal";
-import PlanModal from "../../components/PlanModal";
+import SubscribeModal from "../../components/plans/SubscribeModal";
+import PlanModal from "../../components/plans/PlanModal";
 import { useGetMeQuery } from "../../services/previllageChecker";
-import MySubscriptions from "../../components/MySubscriptions";
-import PlanAdminActions from "../../components/PlanAdminActions";
-import PlanCard from "../../components/PlanCard";
+import MySubscriptions from "../../components/plans/MySubscriptions";
+import PlanAdminActions from "../../components/plans/PlanAdminActions";
+import PlanCard from "../../components/plans/PlanCard";
 import type { FormState, Plan as PlanType } from "../../types";
 
 const VITE_API_BASE = import.meta.env.VITE_API_BASE as string;

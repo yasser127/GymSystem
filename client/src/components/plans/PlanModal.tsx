@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-import type {PlanModalProps} from "../types";
+import type {PlanModalProps} from "../../types";
 
 export default function PlanModal({
   open,

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import type { Plan } from "../types";
+import type { Plan } from "../../types";
 
 type Props = {
   open: boolean;
