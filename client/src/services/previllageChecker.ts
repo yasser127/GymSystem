@@ -53,7 +53,7 @@ export const previllageChecker = createApi({
   }),
   endpoints: (builder) => ({
     getMe: builder.query<MeResponse | null, void>({
-      query: () => "/auth/register",
+      query: () => "/auth/me",
       transformResponse: (response: unknown): MeResponse | null => {
         // make a safe object version of response
         const resp = isObject(response) ? response : {};

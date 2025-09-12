@@ -222,4 +222,52 @@ router.get("/register", verifyToken, async (req, res) => {
   }
 });
 
+// GET /auth/me - return current user's basic info for any authenticated user
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const db = await connectToDataBase();
+
+    const [rows] = await db.query(
+      `SELECT u.id, u.name, u.email, u.username, u.gender, u.birth_date, u.age, u.phone, u.membership_expiry,
+              ut.name AS user_type, ut.can_view_subscriptions, ut.can_view_members, ut.can_view_payments
+       FROM users u
+       LEFT JOIN user_type ut ON u.user_type_id = ut.id
+       WHERE u.id = ? LIMIT 1;`,
+      [req.id]
+    );
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userRow = rows[0];
+
+    // Build tidy user object (don't include permission columns inside `user`)
+    const user = {
+      id: userRow.id,
+      name: userRow.name,
+      email: userRow.email,
+      username: userRow.username,
+      gender: userRow.gender,
+      birth_date: userRow.birth_date,
+      age: userRow.age,
+      phone: userRow.phone,
+      membership_expiry: userRow.membership_expiry,
+    };
+
+    const user_type = userRow.user_type || "member";
+    const permissions = {
+      can_view_subscriptions: !!userRow.can_view_subscriptions,
+      can_view_members: !!userRow.can_view_members,
+      can_view_payments: !!userRow.can_view_payments,
+    };
+
+    return res.status(200).json({ user, user_type, permissions });
+  } catch (error) {
+    console.error("GET /auth/me error:", error);
+    return res.status(500).json({ message: error.message || "Server error" });
+  }
+});
+
+
 export default router;

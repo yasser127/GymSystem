@@ -3,6 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
 import plansRoutes from "./routes/plansRoutes.js";
+import paymentsRoutes from "./routes/paymentsRoutes.js";
+import membersRoutes from "./routes/membersRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
 
 dotenv.config();
 
@@ -26,6 +29,9 @@ app.use(
 
 app.use("/auth", authRoutes);
 app.use("/plans", plansRoutes);
+app.use("/members", membersRoutes);
+app.use("/payments", paymentsRoutes);
+app.use("/settings", settingsRoutes);
 
 app.get("/_health", (req, res) =>
   res.json({ ok: true, time: new Date().toISOString() })

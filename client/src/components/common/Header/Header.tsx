@@ -17,6 +17,8 @@ import {
   LogOut,
   Menu,
   X,
+  User,
+  Settings,
 } from "lucide-react";
 
 type LinkDef = {
@@ -30,7 +32,9 @@ const LINKS: LinkDef[] = [
   { to: "/about", label: "About", icon: Info },
   { to: "/plans", label: "Plans", icon: Calendar },
   { to: "/register", label: "Register a Member", icon: UserPlus },
-  { to: "/payment-history", label: "Payment History", icon: CreditCard },
+  { to: "/payments", label: "Payment History", icon: CreditCard },
+  { to: "/members", label: "Members", icon: User },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 const SidebarContent: React.FC<{
@@ -46,7 +50,7 @@ const SidebarContent: React.FC<{
         src={logo}
         alt="logo"
         className={`rounded object-contain transition-all duration-200 ${
-          collapsed ? "w-10 h-8" : "w-28 h-12"
+          collapsed ? "w-10 h-9" : "w-28 h-12"
         }`}
       />
     </div>
@@ -126,8 +130,13 @@ const Header: React.FC = () => {
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const { data } = useGetMeQuery(undefined, { skip: !token });
   const isAdmin = data?.isAdmin === true;
+
+  const RESTRICTED_FOR_NON_ADMINS = ["/register", "/members", "/settings"];
   const visibleLinks = useMemo(
-    () => LINKS.filter((l) => !(l.label === "Register a Member" && !isAdmin)),
+    () =>
+      LINKS.filter(
+        (l) => !(RESTRICTED_FOR_NON_ADMINS.includes(l.to) && !isAdmin)
+      ),
     [isAdmin]
   );
 
