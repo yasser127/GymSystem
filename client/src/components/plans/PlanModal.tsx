@@ -18,8 +18,8 @@ export default function PlanModal({
       if (previewUrl && previewUrl.startsWith("blob:")) {
         try {
           URL.revokeObjectURL(previewUrl);
-        } catch {
-          // ignore
+        } catch(err) {
+          console.log(err);
         }
       }
     };

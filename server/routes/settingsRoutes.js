@@ -4,11 +4,7 @@ import { connectToDataBase } from "../db.js";
 const router = express.Router();
 const log = (...args) => console.log("[settingsRoutes]", ...args);
 
-/**
- * PAYMENT TYPES
- */
 
-// GET all payment types
 router.get("/payment-types", async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -27,7 +23,7 @@ router.get("/payment-types", async (req, res) => {
   }
 });
 
-// POST create payment type
+
 router.post("/payment-types", async (req, res) => {
   try {
     const { name, description } = req.body || {};
@@ -35,7 +31,7 @@ router.post("/payment-types", async (req, res) => {
       return res.status(400).json({ message: "Name is required" });
 
     const db = await connectToDataBase();
-    // unique name constraint guarded by db, but check quickly
+
     const [exists] = await db.query(
       `SELECT id FROM payment_type WHERE name = ? LIMIT 1`,
       [name.trim()]
@@ -67,7 +63,7 @@ router.post("/payment-types", async (req, res) => {
   }
 });
 
-// PATCH update payment type
+
 router.patch("/payment-types/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -79,7 +75,7 @@ router.patch("/payment-types/:id", async (req, res) => {
       return res.status(400).json({ message: "Nothing to update" });
 
     const db = await connectToDataBase();
-    // optional uniqueness check for name
+
     if (name) {
       const [existing] = await db.query(
         `SELECT id FROM payment_type WHERE name = ? AND id <> ? LIMIT 1`,
@@ -117,7 +113,7 @@ router.patch("/payment-types/:id", async (req, res) => {
   }
 });
 
-// DELETE payment type
+
 router.delete("/payment-types/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -143,12 +139,7 @@ router.delete("/payment-types/:id", async (req, res) => {
   }
 });
 
-/**
- * USER TYPES (permissions)
- * Fields in DB: id, name, can_view_subscriptions, can_view_members, can_view_payments, created_at
- */
 
-// GET all user types
 router.get("/user-types", async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -167,7 +158,7 @@ router.get("/user-types", async (req, res) => {
   }
 });
 
-// POST create user type
+
 router.post("/user-types", async (req, res) => {
   try {
     const {
@@ -216,7 +207,7 @@ router.post("/user-types", async (req, res) => {
   }
 });
 
-// PATCH update user type
+
 router.patch("/user-types/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -290,7 +281,7 @@ router.patch("/user-types/:id", async (req, res) => {
   }
 });
 
-// DELETE user type
+
 router.delete("/user-types/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -299,7 +290,7 @@ router.delete("/user-types/:id", async (req, res) => {
 
     const db = await connectToDataBase();
 
-    // optional: prevent deleting user_type that is referenced by users
+ 
     const [usersWithType] = await db.query(
       `SELECT id FROM users WHERE user_type_id = ? LIMIT 1`,
       [id]

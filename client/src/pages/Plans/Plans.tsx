@@ -15,13 +15,11 @@ export default function Plans(): React.ReactElement {
   const [plans, setPlans] = useState<PlanType[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Modal state for admin create/edit
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PlanType | null>(null);
 
-  // Form state
+
   const emptyForm: FormState = {
     name: "",
     description: "",
@@ -33,14 +31,14 @@ export default function Plans(): React.ReactElement {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // subscription modal for non-admins
+
   const [subscribePlan, setSubscribePlan] = useState<PlanType | null>(null);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
 
-  // small refresh key to tell MySubscriptions to refetch after an action
+ 
   const [subsRefresh, setSubsRefresh] = useState(0);
 
-  // RTK Query for current user
+
   const { data: me } = useGetMeQuery(undefined, {
     refetchOnMountOrArgChange: false,
   });
@@ -53,7 +51,7 @@ export default function Plans(): React.ReactElement {
 
   const token = useMemo<string | null>(() => localStorage.getItem("token"), []);
 
-  // make fetchPlans stable so it can be safely used in useEffect deps
+
   const fetchPlans = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
@@ -75,12 +73,12 @@ export default function Plans(): React.ReactElement {
     }
   }, []);
 
-  // Call fetchPlans on mount (and whenever the fetchPlans identity changes)
+
   useEffect(() => {
     fetchPlans();
   }, [fetchPlans]);
 
-  // Cleanup any blob preview URL on unmount or when previewUrl changes
+ 
   useEffect(() => {
     return () => {
       if (previewUrl && previewUrl.startsWith("blob:")) {
@@ -93,7 +91,7 @@ export default function Plans(): React.ReactElement {
     };
   }, [previewUrl]);
 
-  /* ---------- Admin: create / edit modal helpers ---------- */
+
   function openCreateModal() {
     setIsEditing(false);
     setEditingPlan(null);
@@ -251,7 +249,7 @@ export default function Plans(): React.ReactElement {
     setSubscribePlan(null);
   }
   async function handleSubscribeSuccess() {
-    // tell MySubscriptions component to refetch
+   
     setSubsRefresh((s) => s + 1);
     await fetchPlans();
     closeSubscribeModal();

@@ -7,6 +7,7 @@ import {
   previllageChecker,
 } from "../../../services/previllageChecker";
 import { useAppDispatch } from "../../../store/hooks";
+import type { LinkDef } from "../../../types";
 import {
   Home,
   Info,
@@ -20,12 +21,6 @@ import {
   User,
   Settings,
 } from "lucide-react";
-
-type LinkDef = {
-  to: string;
-  label: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-};
 
 const LINKS: LinkDef[] = [
   { to: "/", label: "Home", icon: Home },

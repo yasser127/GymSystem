@@ -103,3 +103,23 @@ export type MemberRow = {
   endDate?: string | null;
   totalPaid: number;
 };
+
+export type LinkDef = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
+
+export type PaymentRow = {
+  id: number;
+  memberName?: string;
+  amount: number;
+  planName?: string | null;
+  paymentType?: string | null;
+  paidAt: string;
+  createdAt?: string;
+  subscribeId?: number;
+  member_name?: string;
+  plan_id?: number;
+  payment_type?: string;
+};

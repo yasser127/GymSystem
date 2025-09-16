@@ -55,14 +55,14 @@ export const previllageChecker = createApi({
     getMe: builder.query<MeResponse | null, void>({
       query: () => "/auth/me",
       transformResponse: (response: unknown): MeResponse | null => {
-        // make a safe object version of response
+     
         const resp = isObject(response) ? response : {};
 
-        // user might be an object or null/undefined
+        
         const userRaw = resp.user ?? null;
         const user = isObject(userRaw) ? ({ ...(userRaw as Record<string, unknown>) } as User) : null;
 
-        // user_type from top-level response or from user
+      
         const user_type =
           typeof resp.user_type === "string"
             ? resp.user_type
@@ -90,7 +90,7 @@ export const previllageChecker = createApi({
             can_view_payments: toBool(user.can_view_payments),
           };
 
-          // clean permission-like props from user object if present
+       
           delete (user as Record<string, unknown>).can_view_subscriptions;
           delete (user as Record<string, unknown>).can_view_members;
           delete (user as Record<string, unknown>).can_view_payments;

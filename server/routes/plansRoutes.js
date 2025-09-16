@@ -1,4 +1,3 @@
-// plansRoutes.js
 import express from "express";
 import { connectToDataBase } from "../db.js";
 import multer from "multer";
@@ -11,7 +10,7 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const log = (...args) => console.log("[plansRoutes]", ...args);
 
-// verifyToken middleware (updated for new JWT shape)
+
 const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.header("Authorization");
@@ -31,7 +30,6 @@ const verifyToken = (req, res, next) => {
     const token = parts[1];
     const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-    // decoded shape from the updated authRoutes: { id, username, name, user_type, permissions }
     req.user = decoded;
     req.id = decoded.id;
     req.user_type = decoded.user_type ?? null;
@@ -48,7 +46,6 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// validate basic payload
 function validatePlanPayload({ name, price, duration }) {
   if (!name || typeof name !== "string" || name.trim() === "")
     return "Name is required";
@@ -59,7 +56,7 @@ function validatePlanPayload({ name, price, duration }) {
   return null;
 }
 
-/* GET /plans - list metadata */
+
 router.get("/", async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -75,7 +72,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-/* GET /plans/:id/image - serve image blob */
 router.get("/:id/image", async (req, res) => {
   try {
     const id = req.params.id;
@@ -98,13 +94,13 @@ router.get("/:id/image", async (req, res) => {
   }
 });
 
-/* POST /plans - create plan (admin only) */
+
 router.post("/", verifyToken, upload.single("image"), async (req, res) => {
   try {
     log("CREATE /plans request received");
     log("User from token:", req.user);
 
-    // require admin role
+
     if (req.user_type !== "admin") {
       log("Create forbidden: not admin:", req.user);
       return res.status(403).json({ message: "Forbidden: admins only" });
@@ -164,7 +160,7 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
   }
 });
 
-/* PUT /plans/:id - update plan (admin only) */
+
 router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
   try {
     log(
@@ -253,7 +249,7 @@ router.put("/:id", verifyToken, upload.single("image"), async (req, res) => {
   }
 });
 
-/* DELETE /plans/:id - admin only */
+
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
     log(
@@ -280,7 +276,6 @@ router.delete("/:id", verifyToken, async (req, res) => {
   }
 });
 
-/* GET /payment-types */
 router.get("/payment-types", async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -293,9 +288,9 @@ router.get("/payment-types", async (req, res) => {
 });
 
 async function resolvePaymentTypeId(db, provided, cardPresent) {
-  // try numeric id first
+
   if (provided !== undefined && provided !== null) {
-    // numeric string or number?
+  
     if (typeof provided === "number" || /^\d+$/.test(String(provided))) {
       const id = Number(provided);
       const [rows] = await db.query(
@@ -305,7 +300,7 @@ async function resolvePaymentTypeId(db, provided, cardPresent) {
       if (rows && rows.length > 0) return id;
       return null;
     }
-    // treat as name
+
     const [rowsByName] = await db.query(
       "SELECT id FROM payment_type WHERE name = ? LIMIT 1;",
       [String(provided)]
@@ -314,7 +309,7 @@ async function resolvePaymentTypeId(db, provided, cardPresent) {
     return null;
   }
 
-  // not provided: pick default
+
   const preferred = cardPresent ? "Credit Card" : "Cash";
   let [rows] = await db.query(
     "SELECT id FROM payment_type WHERE name = ? LIMIT 1;",
@@ -322,12 +317,12 @@ async function resolvePaymentTypeId(db, provided, cardPresent) {
   );
   if (rows && rows.length > 0) return rows[0].id;
 
-  // fallback to any payment type
+
   [rows] = await db.query("SELECT id FROM payment_type LIMIT 1;");
   return rows && rows.length > 0 ? rows[0].id : null;
 }
 
-/* POST /:id/subscribe */
+
 router.post("/:id/subscribe", verifyToken, async (req, res) => {
   try {
     const memberId = req.id;
@@ -336,7 +331,7 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
 
     const db = await connectToDataBase();
 
-    // fetch plan
+
     const [planRows] = await db.query(
       `SELECT id, name, price, duration FROM plans WHERE id = ? LIMIT 1;`,
       [planId]
@@ -345,7 +340,7 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Plan not found" });
     const plan = planRows[0];
 
-    // check existing active subscription that hasn't ended
+   
     const [activeRows] = await db.query(
       `SELECT COUNT(1) as c FROM subscribe WHERE member_id = ? AND plan_id = ? AND status = 'Active' AND (end_date IS NULL OR end_date >= CURDATE());`,
       [memberId, planId]
@@ -358,13 +353,12 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
         });
     }
 
-    // Payment details (simple demo)
+
     const { card, payment_type_id } = req.body || {};
 
-    // compute payMethodId safely (numeric id that exists or null)
     const payMethodId = await resolvePaymentTypeId(db, payment_type_id, !!card);
 
-    // create cardHash if card provided
+
     let cardHash = null;
     if (card && card.number) {
       const last4 = String(card.number).slice(-4);
@@ -374,11 +368,11 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
         `|last4:${last4}`;
     }
 
-    // create subscription & payment in transaction
+
     try {
       await db.query("START TRANSACTION;");
 
-      // compute dates (JS side)
+    
       const startDate = new Date();
       const startDateStr = startDate.toISOString().slice(0, 10); // YYYY-MM-DD
       const endDate = new Date(startDate);
@@ -395,7 +389,7 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
 
       const subscribeId = subResult.insertId;
 
-      // insert payment record (payMethodId may be null if not found; FK uses ON DELETE SET NULL)
+   
       const amount = Number(plan.price) || 0;
       const [payResult] = await db.query(
         `INSERT INTO payment (member_id, subscribe_id, amount, card_hash, payment_type_id)
@@ -431,7 +425,7 @@ router.post("/:id/subscribe", verifyToken, async (req, res) => {
   }
 });
 
-/* GET /plans/subscriptions - get logged-in user's subscriptions (requires auth) */
+
 router.get("/subscriptions", verifyToken, async (req, res) => {
   try {
     const memberId = req.id;

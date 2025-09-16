@@ -1,21 +1,15 @@
-// routes/membersRoutes.js
 import express from "express";
 import { connectToDataBase } from "../db.js";
 
 const router = express.Router();
 const log = (...args) => console.log("[membersRoutes]", ...args);
 
-// simple logger for this router
+
 router.use((req, res, next) => {
   log(req.method, req.originalUrl);
   next();
 });
 
-/**
- * GET /members
- * Returns users that are members only (user_type_id = 2).
- * Fields: id, name, email, phone, user_type_id
- */
 router.get("/members", async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -36,10 +30,6 @@ router.get("/members", async (req, res) => {
   }
 });
 
-/**
- * GET /members/:id
- * Return a single member by id (useful for edit page).
- */
 router.get("/members/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -70,7 +60,6 @@ router.get("/members/:id", async (req, res) => {
 });
 
 
-// PATCH /members/:id  -- updates name, email, phone for a member
 router.patch("/members/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -85,7 +74,7 @@ router.patch("/members/:id", async (req, res) => {
 
     const db = await connectToDataBase();
 
-    // ensure only members (user_type_id = 2) are updated via this route
+
     const [result] = await db.query(
       `UPDATE users
        SET name = COALESCE(?, name),

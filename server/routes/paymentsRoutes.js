@@ -1,4 +1,3 @@
-// routes/paymentsRoutes.js
 import express from "express";
 import { connectToDataBase } from "../db.js";
 
@@ -10,17 +9,11 @@ router.use((req, res, next) => {
   next();
 });
 
-/**
- * DEBUG: simple ping
- */
+
 router.get("/_debug_payments_ping", async (req, res) => {
   return res.json({ ok: true, at: new Date().toISOString() });
 });
 
-/**
- * DEBUG: return raw payments table rows (no joins)
- * GET /payment/raw
- */
 router.get("/payment/raw", async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -39,17 +32,14 @@ router.get("/payment/raw", async (req, res) => {
   }
 });
 
-/**
- * GET /payment - joined view used by frontend
- * NOTE: use `paid_at` column (not `created_at`)
- */
+
 router.get("/payment", async (req, res) => {
   try {
     const db = await connectToDataBase();
     const [rows] = await db.query(
       `SELECT pay.id,
               pay.member_id,
-              COALESCE(u.name, CONCAT('member#', pay.member_id)) AS member_name,
+              u.name,
               pay.subscribe_id,
               s.plan_id,
               p.name AS plan_name,
@@ -75,7 +65,7 @@ router.get("/payment", async (req, res) => {
   }
 });
 
-/* Convenience debug endpoints for related tables */
+
 router.get("/users", async (req, res) => {
   try {
     const db = await connectToDataBase();

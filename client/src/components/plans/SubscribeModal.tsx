@@ -45,7 +45,7 @@ export default function SubscribeModal({
     }
 
     if (open) {
-      // typed axios response
+ 
       const fetchPaymentTypes = async () => {
         try {
           const res = await axios.get<{ id: number; name: string }[]>(
@@ -54,7 +54,7 @@ export default function SubscribeModal({
           const data = res.data;
           setPaymentTypes(data);
 
-          // default to "Bank Transfer" if available (keeps original logic)
+    
           const creditCard = data.find((t) => t.name === "Bank Transfer");
           setSelectedType(creditCard?.id ?? data[0]?.id ?? null);
         } catch (err) {
@@ -115,7 +115,7 @@ export default function SubscribeModal({
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      // typed axios.post response so we can safely access res.data.message
+
       const res = await axios.post<{ message?: string }>(
         `${apiBase}/plans/${plan.id}/subscribe`,
         payload,
@@ -130,7 +130,7 @@ export default function SubscribeModal({
     } catch (err: unknown) {
       console.error("Subscribe error:", err);
       if (axios.isAxiosError(err)) {
-        // err.response?.data is unknown — coerce to known shape safely
+
         const data = err.response?.data as { message?: string } | undefined;
         setError(data?.message || "Failed to complete purchase");
       } else if (err instanceof Error) {

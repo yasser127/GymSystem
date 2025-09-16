@@ -16,13 +16,13 @@ const Login = () => {
         </Link>
       </div>
 
-     {/* Container */}
+
 <div className="flex flex-col lg:flex-row items-center justify-center min-h-[90vh] gap-10 -mt-20 pt-10">
-  {/* Form on right */}
+
   <div className="w-full max-w-md">
     <LoginForm />
   </div>
-  {/* Image on left */}
+
   <div className="w-full lg:w-1/2 flex justify-center lg:justify-start lg:ml-10">
     <img
       src={login}

@@ -10,11 +10,9 @@ function parseIsAdmin(val) {
   return val === true || val === "true" || val === 1 || val === "1";
 }
 
-/**
- * Helper: resolve user_type id by name (falls back to 'member' if not found)
- */
+
 async function getUserTypeId(pool, typeName = "member") {
-  // Try exact name
+ 
   const [rows] = await pool.query(
     `SELECT id, name, can_view_subscriptions, can_view_members, can_view_payments
      FROM user_type WHERE name = ? LIMIT 1`,
@@ -22,7 +20,7 @@ async function getUserTypeId(pool, typeName = "member") {
   );
   if (rows && rows.length > 0) return rows[0];
 
-  // fallback to 'member'
+
   const [fallback] = await pool.query(
     `SELECT id, name, can_view_subscriptions, can_view_members, can_view_payments
      FROM user_type WHERE name = 'member' LIMIT 1`
@@ -41,7 +39,7 @@ router.post("/login", async (req, res) => {
   try {
     const pool = await connectToDataBase();
 
-    // find user by email (or username if you want to allow either, change query)
+  
     const [rows] = await pool.query(
       `SELECT u.id, u.email, u.username, u.password, u.name,
               ut.name AS user_type, ut.can_view_subscriptions, ut.can_view_members, ut.can_view_payments
@@ -68,7 +66,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Build token payload including user_type and permissions
+
     const payload = {
       id: user.id,
       username: user.username,
@@ -83,7 +81,7 @@ router.post("/login", async (req, res) => {
 
     const token = jwt.sign(payload, process.env.JWT_KEY, { expiresIn: "12h" });
 
-    // don't return password
+
     delete user.password;
     return res.status(200).json({ token, user: { id: user.id, email: user.email, username: user.username, name: user.name, user_type: user.user_type } });
   } catch (error) {
@@ -95,10 +93,10 @@ router.post("/login", async (req, res) => {
 router.post("/register", async (req, res) => {
   const { name, gender, email, username, password } = req.body;
   const isAdminLegacy = parseIsAdmin(req.body.isAdmin);
-  const requestedUserType = req.body.userType; // optional, preferred
+  const requestedUserType = req.body.userType; 
   console.log("Register attempt:", { name, gender, email, username, requestedUserType, isAdminLegacy });
 
-  // Basic validation
+
   if (!name || !email || !username || !password) {
     return res.status(400).json({ message: "Missing required fields" });
   }
@@ -111,8 +109,6 @@ router.post("/register", async (req, res) => {
 
   try {
     const pool = await connectToDataBase();
-
-    // 1) Check duplicates (single query covers both email and username)
     const [existing] = await pool.query(
       `SELECT id, email, username FROM users WHERE email = ? OR username = ? LIMIT 1`,
       [email, username]
@@ -129,7 +125,7 @@ router.post("/register", async (req, res) => {
       return res.status(409).json({ message });
     }
 
-    // 2) Determine user_type
+
     let userTypeRow = null;
     if (requestedUserType) {
       userTypeRow = await getUserTypeId(pool, requestedUserType);
@@ -143,10 +139,10 @@ router.post("/register", async (req, res) => {
       return res.status(500).json({ message: "No user_type found on the server" });
     }
 
-    // 3) Hash password
+  
     const hashPassword = await bcrypt.hash(password, 10);
 
-    // 4) Insert user (include user_type_id)
+
     const [result] = await pool.query(
       `INSERT INTO users (name, gender, email, username, password, user_type_id)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -160,7 +156,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// middleware: verify token and attach user info & permissions
+
 const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.header("Authorization");
@@ -176,7 +172,7 @@ const verifyToken = (req, res, next) => {
     const token = parts[1];
     const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-    // attach useful info for handlers
+
     req.id = decoded.id;
     req.user = decoded;
     req.user_type = decoded.user_type;
@@ -188,9 +184,9 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// GET /register — returns the current user's basic info (admins only access remains possible via permissions)
+
 router.get("/register", verifyToken, async (req, res) => {
-  // if you want to restrict to admins only, check permissions:
+
   if (!req.permissions.can_view_members && req.user_type !== "admin") {
     return res.status(403).json({ message: "Forbidden: admins or authorized roles only" });
   }
@@ -212,7 +208,7 @@ router.get("/register", verifyToken, async (req, res) => {
     }
 
     const user = rows[0];
-    // Do not expose password column if it exists
+
     delete user.password;
 
     return res.status(200).json({ user });
@@ -222,7 +218,7 @@ router.get("/register", verifyToken, async (req, res) => {
   }
 });
 
-// GET /auth/me - return current user's basic info for any authenticated user
+
 router.get("/me", verifyToken, async (req, res) => {
   try {
     const db = await connectToDataBase();
@@ -242,7 +238,7 @@ router.get("/me", verifyToken, async (req, res) => {
 
     const userRow = rows[0];
 
-    // Build tidy user object (don't include permission columns inside `user`)
+
     const user = {
       id: userRow.id,
       name: userRow.name,

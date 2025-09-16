@@ -38,12 +38,12 @@ export default function AdminTable<
     exit: { opacity: 0, y: -6, transition: { duration: 0.18 } },
   };
 
-  // safe helper to read arbitrary keys from row without using `any`
+
   const readRowValue = (row: T, key: string): React.ReactNode => {
     const r = row as Record<string, unknown>;
     const v = r[key];
     if (v === undefined || v === null) return "";
-    // if value is primitive or a React node, return it; else stringify
+
     if (
       typeof v === "string" ||
       typeof v === "number" ||
@@ -59,7 +59,7 @@ export default function AdminTable<
   };
 
   return (
-    // NOTE: overflowX is clipped so tiny hover transforms won't create a horizontal scrollbar.
+
     <div className={`w-full ${className}`} style={{ overflowX: "hidden" }}>
       <div
         className="w-full rounded-2xl overflow-hidden shadow-2xl"
@@ -73,7 +73,7 @@ export default function AdminTable<
           }}
         >
           <div className="px-6 py-3 bg-white/6 backdrop-blur-sm">
-            {/* Single table for both header and body - this keeps columns aligned */}
+        
             <table className="min-w-full table-fixed" style={{ borderCollapse: "separate", borderSpacing: "0 0.6rem" }}>
               <thead>
                 <tr>
@@ -91,7 +91,7 @@ export default function AdminTable<
                 </tr>
               </thead>
 
-              {/* removed divide-y to eliminate the thin separators; spacing is provided by borderSpacing */}
+             
               <tbody>
                 {loading ? (
                   <tr>
@@ -118,21 +118,21 @@ export default function AdminTable<
 
                       return (
                         <motion.tr
-                          // row.id may be undefined; fallback to index
+                      
                           key={String(row.id ?? ri)}
                           custom={ri}
                           initial="hidden"
                           animate="visible"
                           exit="exit"
                           variants={rowVariants}
-                          // use vertical lift instead of scale to avoid horizontal overflow
+                        
                           whileHover={{ y: -4 }}
                           transition={{
                             type: "spring",
                             stiffness: 300,
                             damping: 24,
                           }}
-                          className={`group`} // background moved to individual td so we can round ends
+                          className={`group`} 
                           style={{
                             cursor: "default",
                             transformOrigin: "center",
@@ -149,7 +149,7 @@ export default function AdminTable<
                             return (
                               <td
                                 key={col.key}
-                                // decreased vertical padding for more compact rows
+                         
                                 className={`px-4 py-2 align-top text-sm text-white ${bgClass} group-hover:bg-white/20 ${roundedClasses}`}
                                 style={{ textShadow: "0 1px 0 rgba(0,0,0,0.06)" }}
                               >

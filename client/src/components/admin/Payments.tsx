@@ -5,24 +5,11 @@ import type { Column } from "./AdminTable";
 import { motion } from "framer-motion";
 import type { User, Payment, Subscribe, Plan, PaymentType } from "../../types";
 import { getCache, setCache } from "../../utils/memoryCache";
-import { useGetMeQuery } from "../../services/previllageChecker"; 
+import { useGetMeQuery } from "../../services/previllageChecker";
+import type { PaymentRow } from "../../types";
 
 const VITE_API_BASE = import.meta.env.VITE_API_BASE as string;
 const CACHE_KEY = "payments_admin_data_v1";
-
-type PaymentRow = {
-  id: number;
-  memberName?: string;
-  amount: number;
-  planName?: string | null;
-  paymentType?: string | null;
-  paidAt: string;
-  createdAt?: string;
-  subscribeId?: number;
-  member_name?: string;
-  plan_id?: number;
-  payment_type?: string;
-};
 
 export default function PaymentsAdmin(): React.ReactElement {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -35,10 +22,10 @@ export default function PaymentsAdmin(): React.ReactElement {
 
   const token = useMemo(() => localStorage.getItem("token"), []);
 
-  // RTK Query: get current user + admin flag
+
   const { data: meData, isLoading: meLoading } = useGetMeQuery();
 
-  // Load from in-memory cache on mount — fetch once if no cache exists
+ 
   useEffect(() => {
     const cached = getCache<{
       payments?: Payment[];
@@ -57,13 +44,13 @@ export default function PaymentsAdmin(): React.ReactElement {
       setError(null);
       setLoading(false);
     } else {
-      // no cache: fetch once when the component is displayed
+ 
       fetchAll();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, []);
 
-  // fetchAll: gets fresh data and updates cache
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -74,9 +61,13 @@ export default function PaymentsAdmin(): React.ReactElement {
       const [pRes, uRes, sRes, plRes, ptRes] = await Promise.all([
         axios.get<Payment[]>(`${VITE_API_BASE}/payments/payment`, { headers }),
         axios.get<User[]>(`${VITE_API_BASE}/payments/users`, { headers }),
-        axios.get<Subscribe[]>(`${VITE_API_BASE}/payments/subscribe`, { headers }),
+        axios.get<Subscribe[]>(`${VITE_API_BASE}/payments/subscribe`, {
+          headers,
+        }),
         axios.get<Plan[]>(`${VITE_API_BASE}/payments/plans`, { headers }),
-        axios.get<PaymentType[]>(`${VITE_API_BASE}/payments/payment_type`, { headers }),
+        axios.get<PaymentType[]>(`${VITE_API_BASE}/payments/payment_type`, {
+          headers,
+        }),
       ]);
 
       const paymentsData = pRes.data || [];
@@ -131,9 +122,9 @@ export default function PaymentsAdmin(): React.ReactElement {
     return m;
   }, [paymentTypes]);
 
-  // Visible payments: if me is admin show all, otherwise show only logged-in user's payments.
+
   const visiblePayments = useMemo(() => {
-    // while me is loading, show full payments to avoid flicker; once loaded, apply rule
+
     if (meLoading) return payments;
     if (meData?.isAdmin) return payments;
     const myId = meData?.user?.id;

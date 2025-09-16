@@ -59,7 +59,7 @@ export default function Settings(): React.ReactElement {
   const base = useMemo(() => `${VITE_API_BASE}/settings`, []);
 
   useEffect(() => {
-    fetchAll(); /* eslint-disable-next-line */
+    fetchAll();
   }, []);
 
   async function fetchAll() {
@@ -173,9 +173,9 @@ export default function Settings(): React.ReactElement {
     transition: { type: "spring", stiffness: 300, damping: 28 },
   };
 
-  // typed as framer-motion Transition
+
   const containerLayout: Transition = {
-    layout: { duration: 0.28, ease: [0.4, 0, 0.2, 1] }, // cubic-bezier for easeInOut
+    layout: { duration: 0.28, ease: [0.4, 0, 0.2, 1] }, 
   };
 
   return (

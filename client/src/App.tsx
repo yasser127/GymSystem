@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { Route, Routes, Outlet } from "react-router-dom";
-import Header from "./components/common/Header/Header";
+import Header from "./components/common/Header/SideBar";
 import About from "./pages/About/About";
 import Plans from "./pages/Plans/Plans";
 import Login from "./pages/Login/Login";
@@ -12,6 +12,7 @@ const Register = lazy(() => import("./pages/Register/Register"));
 const MembersAdmin = lazy(() => import("./components/admin/MembersAdmin"));
 const Settings = lazy(() => import("./pages/settings/Settings"));
 import { useGetMeQuery } from "./services/previllageChecker";
+import Footer from "./components/common/Footer/Footer";
 
 const MainLayout = () => {
   return (
@@ -20,6 +21,7 @@ const MainLayout = () => {
       <main className="min-h-screen main-with-sidebar">
         <Outlet />
       </main>
+      <Footer/>
     </div>
   );
 };

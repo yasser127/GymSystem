@@ -1,4 +1,3 @@
-// register-form.tsx
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +23,7 @@ type FormValues = {
   isAdmin: boolean;
 };
 
-// allow any valid div attributes to be passed through
+
 type Props = React.HTMLAttributes<HTMLDivElement>;
 
 export function RegisterForm({ className, ...props }: Props) {
@@ -47,29 +46,28 @@ export function RegisterForm({ className, ...props }: Props) {
   const token: string | null =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  // use RTK Query to fetch current user (skip when no token to avoid 401)
+
   const { data: meData } = useGetMeQuery(undefined, { skip: !token });
 
-  // determine whether the current user can create admins
+
   const canCreateAdmin: boolean = !!meData?.isAdmin;
 
-  // If the current user isn't allowed to create admins, ensure the checkbox is off
+  
   useEffect(() => {
     if (!canCreateAdmin && values.isAdmin) {
       setValues((prev) => ({ ...prev, isAdmin: false }));
     }
-    // only depend on canCreateAdmin
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [canCreateAdmin]);
 
-  // type-safe change handler
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
     const { name } = target;
 
-    // Checkbox -> boolean (only for isAdmin)
+ 
     if (target instanceof HTMLInputElement && target.type === "checkbox") {
       const checked = (target as HTMLInputElement).checked;
       setValues(
@@ -78,14 +76,13 @@ export function RegisterForm({ className, ...props }: Props) {
       return;
     }
 
-    // Gender select -> union
     if (name === "gender") {
       const val = (target as HTMLSelectElement).value as FormValues["gender"];
       setValues((prev) => ({ ...prev, gender: val }));
       return;
     }
 
-    // All other inputs -> string
+  
     const val = (target as HTMLInputElement).value;
     setValues((prev) => ({ ...prev, [name]: val } as unknown as FormValues));
   };
@@ -94,7 +91,7 @@ export function RegisterForm({ className, ...props }: Props) {
     e.preventDefault();
     setMessage(null);
 
-    // client-side guard: don't allow creating admin if current user isn't admin
+ 
     if (values.isAdmin && !canCreateAdmin) {
       setMessage({
         type: "error",
@@ -106,7 +103,7 @@ export function RegisterForm({ className, ...props }: Props) {
     setLoading(true);
 
     try {
-      // Build payload. If creating an admin, indicate userType: "admin"
+    
       const payload: Record<string, unknown> = {
         name: values.name,
         gender: values.gender,
@@ -118,7 +115,7 @@ export function RegisterForm({ className, ...props }: Props) {
         payload.userType = "admin";
       }
 
-      // If creating admin, include Authorization header if token exists (common case)
+    
       const headers =
         values.isAdmin && token
           ? { Authorization: `Bearer ${token}` }
@@ -146,9 +143,7 @@ export function RegisterForm({ className, ...props }: Props) {
           isAdmin: false,
         });
 
-        // Clear RTK Query caches so other parts of the app refetch user/permissions if needed
-        // Cast to any because TS can be strict about util actions
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
         dispatch(previllageChecker.util.resetApiState() as any);
       } else {
         setMessage({
@@ -158,7 +153,7 @@ export function RegisterForm({ className, ...props }: Props) {
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        // try to pull message safely
+    
         const serverMessage =
           typeof err.response?.data === "object" &&
           err.response?.data !== null &&
@@ -260,7 +255,7 @@ export function RegisterForm({ className, ...props }: Props) {
                 />
               </div>
 
-              {/* Show admin checkbox only when current user is admin */}
+      
               {canCreateAdmin ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -274,7 +269,7 @@ export function RegisterForm({ className, ...props }: Props) {
                   <Label htmlFor="isAdmin">Is this user an admin?</Label>
                 </div>
               ) : (
-                // optionally show a small note for non-admins
+          
                 <div className="text-sm text-gray-500">
                   Only administrators may create admin users.
                 </div>

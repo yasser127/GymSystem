@@ -32,7 +32,7 @@ function parseAndFormatDate(val?: string | null): string | null {
   });
 }
 
-// Minimal local Plan type (replace with your app's Plan type if present)
+
 type Plan = { id: number; name: string };
 
 export default function MembersAdmin(): React.ReactElement {
@@ -43,7 +43,7 @@ export default function MembersAdmin(): React.ReactElement {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // modal state
+ 
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -56,7 +56,7 @@ export default function MembersAdmin(): React.ReactElement {
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      // Only call /members — the server's membersRoutes should return members only.
+   
       const usersRes = await axios.get<User[]>(`${VITE_API_BASE}/members/members`, {
         headers,
       });
@@ -66,7 +66,7 @@ export default function MembersAdmin(): React.ReactElement {
         axios.get<Payment[]>(`${VITE_API_BASE}/payments/payment/raw`, { headers }),
       ]);
 
-      // Try to fetch plans. If the endpoint doesn't exist or fails, warn and continue.
+   
       let plansData: Plan[] = [];
       try {
         const plansRes = await axios.get<Plan[]>(`${VITE_API_BASE}/payments/plans`, {
@@ -87,7 +87,7 @@ export default function MembersAdmin(): React.ReactElement {
       setSubs(subsData);
       setPayments(paymentsData);
 
-      // cache the payload in-memory for subsequent mounts while app is open
+  
       setCache(CACHE_KEY, {
         users: usersData,
         subs: subsData,
@@ -96,7 +96,7 @@ export default function MembersAdmin(): React.ReactElement {
       });
     } catch (err: unknown) {
       console.error(err);
-      // try to surface server message when available
+     
       if (axios.isAxiosError(err) && err.response?.data?.message) {
         setError(String(err.response.data.message));
       } else {
@@ -107,7 +107,6 @@ export default function MembersAdmin(): React.ReactElement {
     }
   }, [token]);
 
-  // On mount: read from in-memory cache if present; otherwise fetch once.
   useEffect(() => {
     const cached = getCache<{
       users?: User[];
@@ -124,11 +123,11 @@ export default function MembersAdmin(): React.ReactElement {
       setError(null);
       setLoading(false);
     } else {
-      // No cache — fetch data one time when the component is displayed
+     
       fetchAll();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
+ 
+  }, []); 
 
   const rows: MemberRow[] = useMemo(() => {
     const paymentsByMember = new Map<number, Payment[]>();
@@ -179,7 +178,6 @@ export default function MembersAdmin(): React.ReactElement {
     });
   }, [users, subs, payments, plans]);
 
-  // open modal for editing
   const openEditModal = (id: number) => {
     setEditingMemberId(id);
     setIsModalOpen(true);
@@ -190,9 +188,9 @@ export default function MembersAdmin(): React.ReactElement {
     setEditingMemberId(null);
   };
 
-  // called after EditMemberModal successfully saves
+
   const onMemberSaved = () => {
-    // refresh list to reflect changes
+   
     fetchAll();
     closeEditModal();
   };
