@@ -19,7 +19,6 @@ export default function Plans(): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PlanType | null>(null);
 
-
   const emptyForm: FormState = {
     name: "",
     description: "",
@@ -31,13 +30,10 @@ export default function Plans(): React.ReactElement {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-
   const [subscribePlan, setSubscribePlan] = useState<PlanType | null>(null);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
 
- 
   const [subsRefresh, setSubsRefresh] = useState(0);
-
 
   const { data: me } = useGetMeQuery(undefined, {
     refetchOnMountOrArgChange: false,
@@ -50,7 +46,6 @@ export default function Plans(): React.ReactElement {
   }, [me]);
 
   const token = useMemo<string | null>(() => localStorage.getItem("token"), []);
-
 
   const fetchPlans = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -73,12 +68,10 @@ export default function Plans(): React.ReactElement {
     }
   }, []);
 
-
   useEffect(() => {
     fetchPlans();
   }, [fetchPlans]);
 
- 
   useEffect(() => {
     return () => {
       if (previewUrl && previewUrl.startsWith("blob:")) {
@@ -90,7 +83,6 @@ export default function Plans(): React.ReactElement {
       }
     };
   }, [previewUrl]);
-
 
   function openCreateModal() {
     setIsEditing(false);
@@ -249,7 +241,6 @@ export default function Plans(): React.ReactElement {
     setSubscribePlan(null);
   }
   async function handleSubscribeSuccess() {
-   
     setSubsRefresh((s) => s + 1);
     await fetchPlans();
     closeSubscribeModal();
@@ -263,6 +254,7 @@ export default function Plans(): React.ReactElement {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-2xl font-semibold"
+          id="plans"
         >
           Gym Plans
         </motion.h1>
@@ -289,8 +281,6 @@ export default function Plans(): React.ReactElement {
           )}
         </div>
       </div>
-
-    
 
       {loading ? (
         <div className="text-center py-20 text-gray-500">Loading plans…</div>

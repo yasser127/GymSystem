@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Clock, Star, Heart, Dumbbell, MapPin } from "lucide-react";
 import wallpaper from "../../assets/wallpaper.jpg";
+import Model from "./Model";
+import omar from "../../../public/trainer-1.jpg";
+import lina from "../../../public/trainer-2.jpg";
+import maya from "../../../public/trainer-0.jpeg";
+import gym1 from "../../../public/gym1.jpeg";
+import gym2 from "../../../public/gym-2.webp";
+import gym3 from "../../../public/gym-3.jpg";
+import equipment from "../../../public/gym-equipment-2.webp";
 
-const PROJECT_GRADIENT =
+export const PROJECT_GRADIENT =
   "linear-gradient(90deg, rgba(91,33,182,1) 0%, rgba(124,58,237,1) 45%, rgba(167,139,250,1) 100%)";
 
 type Stat = { label: string; value: string; icon?: React.ReactNode };
@@ -12,17 +20,17 @@ const TRAINERS = [
   {
     name: "Maya Haddad",
     title: "Strength & Conditioning",
-    img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+    img: maya,
   },
   {
     name: "Omar Nassar",
     title: "Functional Trainer",
-    img: "https://images.unsplash.com/photo-1562072543-7f66f6b35b03?auto=format&fit=crop&w=800&q=80",
+    img: omar,
   },
   {
     name: "Lina Azar",
     title: "Yoga & Mobility",
-    img: "https://images.unsplash.com/photo-1531123414780-fd1d1f9b5efb?auto=format&fit=crop&w=800&q=80",
+    img: lina,
   },
 ];
 
@@ -66,6 +74,8 @@ const cardVariants = {
 };
 
 export default function Home(): React.ReactElement {
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
     <div
       className="w-full min-h-screen text-slate-900"
@@ -101,7 +111,7 @@ export default function Home(): React.ReactElement {
                 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white"
                 style={{ textShadow: "0 10px 30px rgba(15,7,32,0.45)" }}
               >
-                 Gym Name
+                Gym Name
               </h1>
 
               <p
@@ -113,20 +123,15 @@ export default function Home(): React.ReactElement {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#membership"
+                <button
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-semibold shadow-lg transition transform"
                   style={{ background: PROJECT_GRADIENT, color: "white" }}
+                  onClick={() => setModalOpen(true)}
                 >
-                  <span>Join Today</span>
-                </a>
+                  Join Today
+                </button>
 
-                <a
-                  href="#contact"
-                  className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 rounded-2xl text-sm text-white/90 hover:bg-white/6 transition"
-                >
-                  Book a Visit
-                </a>
+                {modalOpen && <Model onClose={() => setModalOpen(false)} />}
               </div>
 
               <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -202,7 +207,7 @@ export default function Home(): React.ReactElement {
                 </div>
                 <div className="h-48 md:h-56 w-full overflow-hidden">
                   <img
-                    src="https://images.unsplash.com/photo-1534367612541-3d5c8f9f7f5b?auto=format&fit=crop&w=1600&q=80"
+                    src={equipment}
                     alt="gym equipment"
                     className="w-full h-full object-cover"
                   />
@@ -246,17 +251,6 @@ export default function Home(): React.ReactElement {
                     <div className="text-sm text-slate-600">{t.title}</div>
                     <div className="mt-3 text-sm text-slate-600">
                       Available for coaching and small-group classes.
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        className="px-3 py-1 rounded-lg"
-                        style={{ background: PROJECT_GRADIENT, color: "white" }}
-                      >
-                        Book
-                      </button>
-                      <button className="px-3 py-1 rounded-lg border border-gray-100 text-sm text-slate-900">
-                        Profile
-                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -302,97 +296,24 @@ export default function Home(): React.ReactElement {
             <div className="mt-3 grid grid-cols-3 gap-2">
               <img
                 className="w-full h-20 object-cover rounded"
-                src="https://images.unsplash.com/photo-1526403224743-0a6c0d7f9f6b?auto=format&fit=crop&w=400&q=60"
+                src={gym1}
                 alt="gallery-1"
               />
               <img
                 className="w-full h-20 object-cover rounded"
-                src="https://images.unsplash.com/photo-1526406915892-98ae3b3f5f28?auto=format&fit=crop&w=400&q=60"
+                src={gym2}
                 alt="gallery-2"
               />
               <img
                 className="w-full h-20 object-cover rounded"
-                src="https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=400&q=60"
+                src={gym3}
                 alt="gallery-3"
               />
             </div>
           </motion.div>
         </section>
 
-        {/* Memberships */}
-        <section id="membership" className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-900">Memberships</h2>
-          <p className="text-slate-600 mt-2 max-w-2xl">
-            Flexible plans — try a month or commit and save.
-          </p>
-
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Starter",
-                price: "$25/mo",
-                perks: ["Gym access", "Free group classes", "WiFi"],
-              },
-              {
-                name: "Pro",
-                price: "$49/mo",
-                perks: [
-                  "All gym hours",
-                  "Unlimited classes",
-                  "1 PT session/mo",
-                ],
-              },
-              {
-                name: "Elite",
-                price: "$89/mo",
-                perks: ["PT program", "Sauna & recovery", "Priority booking"],
-              },
-            ].map((p, i) => (
-              <motion.div
-                key={p.name}
-                custom={i}
-                initial="hidden"
-                animate="visible"
-                variants={cardVariants}
-                className="p-6 rounded-2xl bg-white shadow-lg border border-gray-100"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900">
-                      {p.name}
-                    </div>
-                    <div className="text-slate-600">{p.price}</div>
-                  </div>
-                  <div
-                    className="text-sm px-3 py-1 rounded-2xl font-medium"
-                    style={{ background: PROJECT_GRADIENT, color: "white" }}
-                  >
-                    Popular
-                  </div>
-                </div>
-
-                <ul className="mt-4 space-y-2 text-slate-600 text-sm">
-                  {p.perks.map((k) => (
-                    <li key={k} className="flex items-start gap-2">
-                      <span className="mt-1 text-pink-500">•</span>
-                      <span>{k}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-6">
-                  <a
-                    href="#"
-                    className="block text-center px-4 py-2 rounded-xl"
-                    style={{ background: PROJECT_GRADIENT, color: "white" }}
-                  >
-                    Get started
-                  </a>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
+        {/* Memberships washere */}
 
         {/* FAQ / Contact */}
         <section
@@ -430,47 +351,6 @@ export default function Home(): React.ReactElement {
               </details>
             </div>
           </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-white p-6 rounded-2xl shadow-md border border-gray-100"
-          >
-            <h4 className="font-semibold text-slate-900">Get in touch</h4>
-            <p className="text-slate-600 mt-2">
-              Call: +961 71 000 000 • Email: hello@forgefit.lb
-            </p>
-
-            <form className="mt-4 grid gap-3">
-              <input
-                className="bg-gray-50 placeholder:text-slate-400 p-3 rounded-lg border border-gray-100 text-slate-900"
-                placeholder="Your name"
-              />
-              <input
-                className="bg-gray-50 placeholder:text-slate-400 p-3 rounded-lg border border-gray-100 text-slate-900"
-                placeholder="Email or phone"
-              />
-              <textarea
-                className="bg-gray-50 placeholder:text-slate-400 p-3 rounded-lg h-24 border border-gray-100 text-slate-900"
-                placeholder="How can we help?"
-              />
-              <div className="flex gap-2">
-                <button
-                  className="px-4 py-2 rounded-xl font-medium"
-                  style={{ background: PROJECT_GRADIENT, color: "white" }}
-                >
-                  Send
-                </button>
-                <a
-                  href="/"
-                  className="px-4 py-2 rounded-xl border border-gray-100 text-slate-900"
-                >
-                  Visit site
-                </a>
-              </div>
-            </form>
-          </motion.div>
         </section>
 
         <footer className="py-8 text-center text-slate-600">
@@ -480,8 +360,7 @@ export default function Home(): React.ReactElement {
               <span className="font-semibold"> Gym Name</span>
             </div>
             <div>
-              © {new Date().getFullYear()}  Gym Name — Built with ❤️ in
-              Beirut
+              © {new Date().getFullYear()} Gym Name — Built with ❤️ in Beirut
             </div>
           </div>
         </footer>

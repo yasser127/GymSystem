@@ -130,7 +130,9 @@ const Header: React.FC = () => {
   const visibleLinks = useMemo(
     () =>
       LINKS.filter(
-        (l) => !(RESTRICTED_FOR_NON_ADMINS.includes(l.to) && !isAdmin)
+        (l) =>
+          !(RESTRICTED_FOR_NON_ADMINS.includes(l.to) && !isAdmin) &&
+          !(l.to === "/payments" && !token)
       ),
     [isAdmin]
   );

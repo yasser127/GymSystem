@@ -29,14 +29,14 @@ const MainLayout = () => {
 const App = (): React.ReactElement => {
   const { data: me, } = useGetMeQuery();
   const isAdmin = !!me?.isAdmin;
-
+  const isLoggedIn = localStorage.getItem("token") !== null;
   return (
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/about" element={<About />} />
-        <Route path="/payments" element={<Payments />} />
+        { isLoggedIn && <Route path="/payments" element={<Payments />} /> }
         <Route path="/login" element={<Login />} />
         {isAdmin && (
           <Route

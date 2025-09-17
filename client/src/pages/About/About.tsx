@@ -100,7 +100,7 @@ export default function AboutGymPage(): React.ReactElement {
 
         <section className="text-center">
           <a
-            href="#membership"
+            href="/plans"
             className="inline-flex px-5 py-2 rounded-2xl font-semibold"
             style={{ background: PROJECT_GRADIENT, color: "white" }}
           >
