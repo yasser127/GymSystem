@@ -20,6 +20,9 @@ import {
   X,
   User,
   Settings,
+  Beef,
+  CircleUserRound,
+  Dumbbell,
 } from "lucide-react";
 
 const LINKS: LinkDef[] = [
@@ -30,6 +33,9 @@ const LINKS: LinkDef[] = [
   { to: "/payments", label: "Payment History", icon: CreditCard },
   { to: "/members", label: "Members", icon: User },
   { to: "/settings", label: "Settings", icon: Settings },
+  {to: "/suplements", label: "Suplements", icon: Beef},
+  {to: "/workout", label: "Workout", icon: Dumbbell},
+  {to: "/account", label: "Account", icon: CircleUserRound},
 ];
 
 const SidebarContent: React.FC<{

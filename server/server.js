@@ -7,6 +7,7 @@ import paymentsRoutes from "./routes/paymentsRoutes.js";
 import membersRoutes from "./routes/membersRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import mail from "./mail.js";
+import suplemets from "./routes/suplemetsRoute.js";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use("/plans", plansRoutes);
 app.use("/members", membersRoutes);
 app.use("/payments", paymentsRoutes);
 app.use("/settings", settingsRoutes);
+app.use("/suplemets", suplemets);
 app.use("/api", mail);
 
 app.get("/_health", (req, res) =>

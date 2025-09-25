@@ -123,3 +123,12 @@ export type PaymentRow = {
   plan_id?: number;
   payment_type?: string;
 };
+
+export type Supplement = {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  duration?: number;
+  imageUrl?: string | null; // data URI, URL, or blob: URL
+};

@@ -5,14 +5,20 @@ import About from "./pages/About/About";
 import Plans from "./pages/Plans/Plans";
 import Login from "./pages/Login/Login";
 import Home from "./pages/Home/Home";
+import Workout from "./pages/workout/workout";
+
 const Payments = lazy(() => import("./components/admin/Payments"));
 
 import "./App.css";
 const Register = lazy(() => import("./pages/Register/Register"));
 const MembersAdmin = lazy(() => import("./components/admin/MembersAdmin"));
 const Settings = lazy(() => import("./pages/settings/Settings"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword/ResetPassword"));
+const Suplements = lazy(() => import("./pages/Suplements/Suplements"));
 import { useGetMeQuery } from "./services/previllageChecker";
 import Footer from "./components/common/Footer/Footer";
+import AccountSettings from "./pages/Profile/Profile";
+
 
 const MainLayout = () => {
   return (
@@ -36,7 +42,11 @@ const App = (): React.ReactElement => {
         <Route path="/" element={<Home />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/about" element={<About />} />
+        <Route path="/workout" element={<Workout />} />
         { isLoggedIn && <Route path="/payments" element={<Payments />} /> }
+        { isLoggedIn && <Route path="/account" element={<AccountSettings />} /> }
+        { isLoggedIn && <Route path="/suplements" element={<Suplements />} /> }
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/login" element={<Login />} />
         {isAdmin && (
           <Route

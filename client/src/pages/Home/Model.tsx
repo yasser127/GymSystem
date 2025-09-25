@@ -1,4 +1,3 @@
-// src/components/Model.tsx
 import React, { useEffect, useRef, useState } from "react";
 
 const PROJECT_GRADIENT =
@@ -17,7 +16,9 @@ const Model: React.FC<Props> = ({ onClose }) => {
   const messageRef = useRef<HTMLTextAreaElement | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<null | { ok: boolean; msg?: string }>(null);
+  const [status, setStatus] = useState<null | { ok: boolean; msg?: string }>(
+    null
+  );
 
   const safeClose = () => {
     if (typeof onClose === "function") onClose();
@@ -155,11 +156,13 @@ const Model: React.FC<Props> = ({ onClose }) => {
             >
               {loading ? "Sending…" : "Send"}
             </button>
-           
+
             {status ? (
               <div
                 role="status"
-                className={`ml-3 text-sm ${status.ok ? "text-green-600" : "text-red-600"}`}
+                className={`ml-3 text-sm ${
+                  status.ok ? "text-green-600" : "text-red-600"
+                }`}
               >
                 {status.msg}
               </div>
