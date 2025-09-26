@@ -84,7 +84,7 @@ const Model: React.FC<Props> = ({ onClose }) => {
         nameRef.current && (nameRef.current.value = "");
         contactRef.current && (contactRef.current.value = "");
         messageRef.current && (messageRef.current.value = "");
-        // optionally close modal after a short delay:
+       
         setTimeout(() => safeClose(), 900);
       } else {
         setStatus({ ok: false, msg: body.error || "Failed to send message" });

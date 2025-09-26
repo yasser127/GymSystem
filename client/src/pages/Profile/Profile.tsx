@@ -1,4 +1,3 @@
-// src/pages/Profile/Profile.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { useGetMeQuery } from "../../services/previllageChecker";
